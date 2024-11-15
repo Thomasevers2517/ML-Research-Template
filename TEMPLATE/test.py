@@ -25,13 +25,14 @@ if __name__ == '__main__':
     print(f"Input shape: {input_shape}, Output shape: {targets_shape}")
     
     model = ImageMLP.ImageMLP(input_shape=input_shape, output_shape=targets_shape, num_layers=1, hidden_size=50).to(device)
+    
     wandb.watch(model)
     
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     loss_fn = torch.nn.CrossEntropyLoss()
     trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device)
     
-    trainer.train(epochs=1)
+    trainer.train(epochs=2)
     wandb.log({"test_loss": trainer.test(test_loader=test_loader)})
     
     

@@ -26,7 +26,8 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = device
-
+        
+        self.first_batch = True
     
     def train(self, epochs: int) -> None:
         """
@@ -52,9 +53,12 @@ class BaseTrainer:
         epoch_pbar.close()
         
     def train_epoch(self) -> float:
+        self.on_epoch_start()
         self.model.train()
         total_loss = 0
+        
         for [inputs, targets] in self.train_loader:
+            
             loss = self.train_batch(inputs, targets)
             total_loss += loss
             
@@ -64,26 +68,48 @@ class BaseTrainer:
         val_loss = self.validate(val_loader=self.val_loader)
         
         # Update epoch progress bar
-        
+        self.on_epoch_end()
         return average_loss, val_loss
-    def on_epoch_end(self, epoch: int) -> None:
+    def on_epoch_start(self) -> None:
         """
-        Callback function that is called at the end of each epoch.
+        Callback function that is called at the start of each epoch.
 
         Args:
             epoch (int): The current epoch number.
         """
+        self.first_batch = True
+        self.model.register_hooks()
+        pass
+    
+    def on_epoch_end(self) -> None:
+        """
+        Callback function that is called at the end of each epoch.
+
+        """
+        
+        pass
+    
+    def on_batch_start(self) -> None:
+        """
+        Callback function that is called at the start of each batch.
+        """
         pass
     
 
-    def on_batch_end(self, batch: int) -> None:
+    def on_batch_end(self) -> None:
         """
         Callback function that is called at the end of each batch.
-
-        Args:
-            batch (int): The current batch number.
         """
+        if self.first_batch:
+            for name, activation in self.model.activations.items():
+                print(f'activations/{name}')
+                print(activation.cpu().numpy().shape)
+                wandb.log({f'activations/sample1/{name}': wandb.Histogram(activation.cpu().numpy()[0])})
+            self.first_batch = False    
+            self.model.activations.clear()
+            self.model.remove_hooks()
         pass
+        
     
     def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor, log_level : int = None) -> float:
         """
@@ -97,12 +123,15 @@ class BaseTrainer:
         Returns:
             float: The loss value for the training step.
         """
+        self.on_batch_start()
         self.optimizer.zero_grad()
         loss = self.calculate_batch_loss(inputs, targets)
         loss.backward()
         self.optimizer.step()
         
+        self.on_batch_end()
         return loss.item()
+    
     def calculate_batch_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
         """
         Calculates the loss for a single batch of inputs and targets.
