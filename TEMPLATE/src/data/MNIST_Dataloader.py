@@ -19,7 +19,7 @@ class MNIST_Data(Dataset):
         self.transform = transform
 
         self.dataset = datasets.MNIST(root=self.data_dir, train=self.train, download=True, transform=self.transform)
-
+        self.num_classes = len(self.dataset.classes)
     def __len__(self):
         return len(self.dataset)
 

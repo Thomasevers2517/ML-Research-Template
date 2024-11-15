@@ -55,13 +55,13 @@ class BaseTrainer:
         self.model.train()
         total_loss = 0
         for [inputs, targets] in self.train_loader:
-            loss = self.train_step(inputs, targets)
+            loss = self.train_batch(inputs, targets)
             total_loss += loss
             
             # Update batch progress bar
             
         average_loss = total_loss / len(self.train_loader)
-        val_loss = self.validate()
+        val_loss = self.validate(val_loader=self.val_loader)
         
         # Update epoch progress bar
         
@@ -75,23 +75,7 @@ class BaseTrainer:
         """
         pass
     
-    def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
-        """
-        Performs a single training step on the given inputs and targets.
 
-        Args:
-            inputs (torch.Tensor): The input data for training.
-            targets (torch.Tensor): The target data for training.
-
-        Returns:
-            float: The loss value for the training step.
-        """
-        self.optimizer.zero_grad()
-        loss = self.batch_loss(inputs, targets)
-        loss.backward()
-        self.optimizer.step()
-        
-        return loss.item()
     def on_batch_end(self, batch: int) -> None:
         """
         Callback function that is called at the end of each batch.
@@ -101,7 +85,25 @@ class BaseTrainer:
         """
         pass
     
-    def batch_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
+    def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor, log_level : int = None) -> float:
+        """
+        Performs a single training step on the given inputs and targets.
+
+        Args:
+            inputs (torch.Tensor): The input data for training.
+            targets (torch.Tensor): The target data for training.
+            log_level (int): The level of logging to perform.
+
+        Returns:
+            float: The loss value for the training step.
+        """
+        self.optimizer.zero_grad()
+        loss = self.calculate_batch_loss(inputs, targets)
+        loss.backward()
+        self.optimizer.step()
+        
+        return loss.item()
+    def calculate_batch_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
         """
         Calculates the loss for a single batch of inputs and targets.
 
@@ -118,7 +120,7 @@ class BaseTrainer:
         
         return loss
     
-    def data_loss(self, dataloader: DataLoader) -> float:
+    def calculate_data_loss(self, dataloader: DataLoader) -> float:
         """
         Calculates the loss for the entire dataset.
 
@@ -132,11 +134,11 @@ class BaseTrainer:
         total_loss = 0
         with torch.no_grad():
             for [inputs, targets] in dataloader:
-                loss = self.batch_loss(inputs, targets)
+                loss = self.calculate_batch_loss(inputs, targets)
                 total_loss += loss.item()
-                
-        return total_loss / len(dataloader)
-    
+        avg_loss = total_loss / len(dataloader)
+        
+        return avg_loss
     def validate(self, val_loader: DataLoader) -> float:
         """
         Validates the model on the validation dataset.
@@ -144,12 +146,12 @@ class BaseTrainer:
         Returns:
             float: The average loss on the validation dataset.
         """
-        return self.data_loss(val_loader)
-    def test (self, test_loader) -> float:
+        return self.calculate_data_loss(val_loader)
+    def test (self, test_loader: DataLoader) -> float:
         """
         Tests the model on the test dataset.
 
         Returns:
             float: The average loss on the test dataset.
         """
-        return self.data_loss(test_loader)
+        return self.calculate_data_loss(test_loader)
