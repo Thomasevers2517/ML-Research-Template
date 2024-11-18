@@ -32,13 +32,16 @@ class BaseModule(torch.nn.Module):
                 self.activations[name] = output.detach()
             elif isinstance(output, (tuple, list)):
                 # Detach each tensor within the tuple or list
-                detached = []
+                elements = []
                 for o in output:
                     if isinstance(o, torch.Tensor):
-                        detached.append(o.detach())
+                        elements.append(o.detach())
+                    elif o is None:
+                        pass
                     else:
-                        detached.append(o)  # Keep non-tensor elements as is
-                self.activations[name] = detached if isinstance(output, list) else tuple(detached)
+                        raise Warning(f"Unhandled layer output type: {type(o)}")
+                        
+                self.activations[name] = torch.stack(elements)
             else:
                 raise Warning(f"Unhandled output type: {type(output)}")
                 self.activations[name] = output  # Store as is or handle accordingly

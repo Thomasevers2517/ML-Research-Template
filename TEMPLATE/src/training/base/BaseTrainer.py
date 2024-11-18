@@ -5,7 +5,8 @@ from torch.nn import Module
 from typing import Callable
 import wandb
 from tqdm import tqdm
-
+import numpy as np
+import re
 
 class BaseTrainer:
     def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: Callable, device: torch.device, 
@@ -33,7 +34,7 @@ class BaseTrainer:
         self.log_interval = log_interval
         
         # Flag to check if it is the first batch of a validation step
-        self.first_batch = False
+        self.log_batch = False
         
     def train(self, epochs: int) -> None:
         """
@@ -117,10 +118,9 @@ class BaseTrainer:
         """
         Callback function that is called at the end of each batch.
         """
-        if self.first_batch:
+        if self.log_batch:
             self.log_hooks()
-            self.first_batch = False    
-            
+            self.log_batch = False    
         pass
     def log_hooks(self) -> None:
         self.log_activations(self.model.activations)
@@ -136,12 +136,29 @@ class BaseTrainer:
         """
         if n_samples_to_log > len(activations[list(activations.keys())[0]]):
             n_samples_to_log = len(activations[list(activations.keys())[0]])
-            raise Warning("num_batches is greater than the number of samples in the batch")
-
-        for name, activation in activations.items():
-            for sample in range(n_samples_to_log):
-                wandb.log({f'activations/{sample}/{name}': wandb.Histogram(activation.cpu().numpy()[sample])})
+            raise Warning("num_samples_to_log is greater than the number of samples in the batch")
+        
+        for sample_idx in range(n_samples_to_log):
+            for name, activation in activations.items():
+                activation = activation.cpu().numpy()
+                if re.match(r"transformer\.\d+\.attn\.att_map", name):
+                    self.log_att_map(name=name, sample_idx=sample_idx , att_map=activation[sample_idx])
+                    
         self.model.activations.clear()
+        
+    def log_att_map(self, name, sample_idx, att_map: np.ndarray) -> None:
+        
+        self.log_cls_attmap(name, sample_idx, att_map)
+                       
+    def log_cls_attmap(self, name, sample_idx, att_map: np.ndarray) -> None:
+        cls_attentions = att_map[:, 1:, 0] *255
+        cls_attentions = np.reshape(cls_attentions, (cls_attentions.shape[0], 
+                                                        np.sqrt(cls_attentions.shape[1]).astype(int), 
+                                                        np.sqrt(cls_attentions.shape[1]).astype(int)))
+        nH = cls_attentions.shape[0] # Number of heads
+        layer_idx = name.split('.')[1]
+        for i in range(nH):
+            wandb.log({f'activations/{sample_idx}/layer{layer_idx}/cls_attention/head{i}': wandb.Image(cls_attentions[i,:,:])})    
         
     def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor, log_level : int = None) -> float:
         """
@@ -175,9 +192,11 @@ class BaseTrainer:
         Returns:
             float: The loss value for the batch.
         """
+        
         inputs, targets = inputs.to(self.device), targets.to(self.device)
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, targets)
+        
         
         return loss
     
@@ -195,29 +214,33 @@ class BaseTrainer:
         total_loss = 0
         with torch.no_grad():
             for [inputs, targets] in dataloader:
+                self.on_batch_start()
                 loss = self.calculate_batch_loss(inputs, targets)
+                self.on_batch_end()
                 total_loss += loss.item()
         avg_loss = total_loss / len(dataloader)
         
         return avg_loss
     
     def validate(self) -> float:
-        self.on_validation_start()
         """
         Validates the model on the validation dataset.
 
         Returns:
             float: The average loss on the validation dataset.
         """
+        self.on_validation_start()
+        
         val_loss = self.calculate_data_loss(self.val_loader) 
         
         self.on_validation_end(val_loss=val_loss)
         return val_loss
+    
     def on_validation_start(self) -> None:
         """
         Callback function that is called at the start of the validation step.
         """
-        self.first_batch = True
+        self.log_batch = True
         self.model.register_hooks()
     
     def on_validation_end(self, val_loss: float) -> None:
