@@ -5,8 +5,7 @@ import torch.nn as nn
 class MLP(BaseModule):
     def __init__(self, input_shape: tuple, output_shape: tuple, num_layers: int, hidden_size: int):
         super(MLP, self).__init__(input_shape=input_shape, output_shape=output_shape)
-        self.input_size = torch.prod(torch.tensor(self.input_shape)).item()
-        self.output_size = torch.prod(torch.tensor(self.output_shape)).item()
+
         
         self.num_layers = num_layers
         self.hidden_size = hidden_size

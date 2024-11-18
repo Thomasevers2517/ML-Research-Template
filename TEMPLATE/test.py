@@ -1,6 +1,7 @@
 import src.data.MNIST_Dataloader as MNIST_Dataloader
 from src.training.base.BaseTrainer import BaseTrainer
 import src.models.euclidean.image.ImageMLP as ImageMLP
+import src.models.euclidean.base.Tranformer.VIT as VIT
 import torch
 import wandb
 
@@ -16,23 +17,27 @@ if __name__ == '__main__':
     # Initialize wandb
     wandb.init(project="template_test", dir="TEMPLATE/log")
 
-    train_loader, val_loader, test_loader = MNIST_Dataloader.get_dataloaders('TEMPLATE/data/MNIST/raw', 8)
+    train_loader, val_loader, test_loader = MNIST_Dataloader.get_dataloaders('TEMPLATE/data/MNIST/raw', 1024)
     
     inputs, targets = next(iter(train_loader))
 
     input_shape = inputs.shape[1:]  # Exclude batch size
-    targets_shape = train_loader.dataset.dataset.num_classes
+    targets_shape = (train_loader.dataset.dataset.num_classes,)
     print(f"Input shape: {input_shape}, Output shape: {targets_shape}")
+   
     
-    model = ImageMLP.ImageMLP(input_shape=input_shape, output_shape=targets_shape, num_layers=1, hidden_size=50).to(device)
+    model = ImageMLP.ImageMLP(input_shape=input_shape, output_shape=targets_shape, 
+    num_layers=1, hidden_size=50).to(device)
     
+    # model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
+    #                 num_layers=1, embedding_size=1, num_heads=1, patch_size=4).to(device)
     wandb.watch(model)
     
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     loss_fn = torch.nn.CrossEntropyLoss()
     trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device)
     
-    trainer.train(epochs=2)
+    trainer.train(epochs=1)
     wandb.log({"test_loss": trainer.test(test_loader=test_loader)})
     
     

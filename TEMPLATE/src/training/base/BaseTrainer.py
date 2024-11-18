@@ -8,7 +8,8 @@ from tqdm import tqdm
 
 
 class BaseTrainer:
-    def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: Callable, device: torch.device):
+    def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: Callable, device: torch.device, 
+                 val_interval: int = 1, log_interval: int = 1):
         """
         Initializes the BaseTrainer with the given model, data loaders, optimizer, loss function, and device.
 
@@ -19,6 +20,8 @@ class BaseTrainer:
             optimizer (Optimizer): The optimizer for updating model parameters.
             loss_fn (Callable): The loss function to calculate the loss.
             device (torch.device): The device to run the training on (CPU or GPU).
+            val_interval (int): The number of epochs between each validation step.
+            log_interval (int): The number of epochs between each log step.
         """
         self.model = model
         self.train_loader = train_loader
@@ -26,9 +29,12 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = device
+        self.val_interval = val_interval
+        self.log_interval = log_interval
         
-        self.first_batch = True
-    
+        # Flag to check if it is the first batch of a validation step
+        self.first_batch = False
+        
     def train(self, epochs: int) -> None:
         """
         Trains the model for a specified number of epochs.
@@ -38,38 +44,46 @@ class BaseTrainer:
         """
         epoch_pbar = tqdm(range(epochs), desc='Epochs')
         for epoch in epoch_pbar:
-            average_loss, val_loss = self.train_epoch()
+            avg_train_loss = self.train_epoch(epoch=epoch)
+            
+            if epoch % self.val_interval == 0:
+                val_loss = self.validate()
             
             epoch_pbar.set_postfix({
-            'train_loss': f'{average_loss:.4f}',
+            'train_loss': f'{avg_train_loss:.4f}',
             'val_loss': f'{val_loss:.4f}'
             })
-            wandb.log({
-                "train_loss": average_loss,
-                "val_loss": val_loss,
-                "epoch": epoch
-            })
+
             
         epoch_pbar.close()
+        self.on_training_end()
+    def on_training_end(self) -> None:
+        """
+        Callback function that is called at the end of the training process.
+        """
+        pass
         
-    def train_epoch(self) -> float:
+    def train_epoch(self, epoch:int) -> float:
         self.on_epoch_start()
-        self.model.train()
-        total_loss = 0
         
-        for [inputs, targets] in self.train_loader:
-            
+        self.model.train()
+        
+        total_loss = 0
+        batch_pbar = tqdm(self.train_loader, desc='Batches', leave=False, mininterval=1)
+        for inputs, targets in batch_pbar:
             loss = self.train_batch(inputs, targets)
             total_loss += loss
             
+        batch_pbar.close()   
             # Update batch progress bar
-            
-        average_loss = total_loss / len(self.train_loader)
-        val_loss = self.validate(val_loader=self.val_loader)
+        avg_train_loss = total_loss / len(self.train_loader)
+
+        
         
         # Update epoch progress bar
-        self.on_epoch_end()
-        return average_loss, val_loss
+        self.on_epoch_end(epoch, avg_train_loss)
+        return avg_train_loss
+    
     def on_epoch_start(self) -> None:
         """
         Callback function that is called at the start of each epoch.
@@ -77,15 +91,18 @@ class BaseTrainer:
         Args:
             epoch (int): The current epoch number.
         """
-        self.first_batch = True
-        self.model.register_hooks()
+
         pass
     
-    def on_epoch_end(self) -> None:
+    def on_epoch_end(self, epoch, avg_train_loss) -> None:
         """
         Callback function that is called at the end of each epoch.
 
         """
+        wandb.log({
+                "train_loss": avg_train_loss,
+                "epoch": epoch
+            })
         
         pass
     
@@ -101,16 +118,31 @@ class BaseTrainer:
         Callback function that is called at the end of each batch.
         """
         if self.first_batch:
-            for name, activation in self.model.activations.items():
-                print(f'activations/{name}')
-                print(activation.cpu().numpy().shape)
-                wandb.log({f'activations/sample1/{name}': wandb.Histogram(activation.cpu().numpy()[0])})
+            self.log_hooks()
             self.first_batch = False    
-            self.model.activations.clear()
-            self.model.remove_hooks()
+            
         pass
+    def log_hooks(self) -> None:
+        self.log_activations(self.model.activations)
+        self.model.remove_hooks()
+
         
-    
+    def log_activations(self, activations: dict, n_samples_to_log:int=1) -> None:
+        """
+        Logs the activations of the model.
+
+        Args:
+            activations (dict): A dictionary containing the activations of the model.
+        """
+        if n_samples_to_log > len(activations[list(activations.keys())[0]]):
+            n_samples_to_log = len(activations[list(activations.keys())[0]])
+            raise Warning("num_batches is greater than the number of samples in the batch")
+
+        for name, activation in activations.items():
+            for sample in range(n_samples_to_log):
+                wandb.log({f'activations/{sample}/{name}': wandb.Histogram(activation.cpu().numpy()[sample])})
+        self.model.activations.clear()
+        
     def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor, log_level : int = None) -> float:
         """
         Performs a single training step on the given inputs and targets.
@@ -168,14 +200,37 @@ class BaseTrainer:
         avg_loss = total_loss / len(dataloader)
         
         return avg_loss
-    def validate(self, val_loader: DataLoader) -> float:
+    
+    def validate(self) -> float:
+        self.on_validation_start()
         """
         Validates the model on the validation dataset.
 
         Returns:
             float: The average loss on the validation dataset.
         """
-        return self.calculate_data_loss(val_loader)
+        val_loss = self.calculate_data_loss(self.val_loader) 
+        
+        self.on_validation_end(val_loss=val_loss)
+        return val_loss
+    def on_validation_start(self) -> None:
+        """
+        Callback function that is called at the start of the validation step.
+        """
+        self.first_batch = True
+        self.model.register_hooks()
+    
+    def on_validation_end(self, val_loss: float) -> None:
+        
+        """
+        Callback function that is called at the end of the validation step.
+        """
+        wandb.log({
+            "val_loss": val_loss
+        })
+        
+    
+    
     def test (self, test_loader: DataLoader) -> float:
         """
         Tests the model on the test dataset.

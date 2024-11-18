@@ -19,7 +19,7 @@ class MNIST_Data(Dataset):
         self.transform = transform
 
         self.dataset = datasets.MNIST(root=self.data_dir, train=self.train, download=True, transform=self.transform)
-        self.num_classes = len(self.dataset.classes)
+        self.num_classes =len(self.dataset.classes)
     def __len__(self):
         return len(self.dataset)
 
@@ -47,8 +47,8 @@ def get_dataloaders(data_dir: str, batch_size: int, val_split: float = 0.1):
     val_size = len(train_dataset) - train_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader
