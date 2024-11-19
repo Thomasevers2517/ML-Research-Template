@@ -10,10 +10,13 @@ if __name__ == '__main__':
     if torch.cuda.is_available():
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        device = torch.device('cuda')
+        if torch.cuda.device_count() > 1:
+            device = torch.device('cuda:3')
+        else:
+            device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-
+    print(f"Using device: {device}")
     # Initialize wandb
     wandb.init(project="template_test", dir="TEMPLATE/log")
 
