@@ -22,7 +22,7 @@ class BaseTrainer:
             loss_fn (Callable): The loss function to calculate the loss.
             device (torch.device): The device to run the training on (CPU or GPU).
             val_interval (int): The number of epochs between each validation step.
-            log_interval (int): The number of epochs between each log step.
+            log_interval (int): The number of validation steps between each logging step.
         """
         self.model = model
         self.train_loader = train_loader
@@ -35,6 +35,9 @@ class BaseTrainer:
         
         # Flag to check if it is the first batch of a validation step
         self.log_batch = False
+        
+        # Counter to keep track of the number of validation steps since the last log
+        self.since_last_log = 0
         
     def train(self, epochs: int) -> None:
         """
@@ -151,15 +154,32 @@ class BaseTrainer:
         self.log_cls_attmap(name, sample_idx, att_map)
                        
     def log_cls_attmap(self, name, sample_idx, att_map: np.ndarray) -> None:
-        cls_attentions = att_map[:, 1:, 0] *255
-        cls_attentions = np.reshape(cls_attentions, (cls_attentions.shape[0], 
-                                                        np.sqrt(cls_attentions.shape[1]).astype(int), 
-                                                        np.sqrt(cls_attentions.shape[1]).astype(int)))
-        nH = cls_attentions.shape[0] # Number of heads
-        layer_idx = name.split('.')[1]
-        for i in range(nH):
-            wandb.log({f'activations/{sample_idx}/layer{layer_idx}/cls_attention/head{i}': wandb.Image(cls_attentions[i,:,:])})    
+        if len(att_map.shape) == 2:
+            nH = 1
+        else:
+            nH = att_map.shape[0] # Number of heads
+            
+        patch_to_cls_attentions = att_map[:, 1:, 0] 
+        cls_to_patch_attentions = att_map[:, 0, 1:]
+        patch_to_cls_attentions = np.reshape(patch_to_cls_attentions, (nH, 
+                                                        int(self.model.input_shape[1]/self.model.patch_size), 
+                                                        int(self.model.input_shape[2]/self.model.patch_size)))
+        cls_to_patch_attentions = np.reshape(patch_to_cls_attentions, (nH, 
+                                                        int(self.model.input_shape[1]/self.model.patch_size), 
+                                                        int(self.model.input_shape[2]/self.model.patch_size)))
+
         
+        layer_idx = name.split('.')[1]
+        
+        for i in range(nH):
+            max_val_cls_to_patch = np.max(cls_to_patch_attentions[i,:,:])
+            head_normalized_cls_to_patch_attentions = cls_to_patch_attentions[i,:,:] / max_val_cls_to_patch
+
+            wandb.log({f"Name-- patch_to_cls_att, sample_idx-{sample_idx}, layer-{layer_idx}, head-{i}":
+                wandb.Image(patch_to_cls_attentions[i,:,:])})
+            
+            wandb.log({f"Name-- head_normalized_cls_to_patch_att, sample_idx-{sample_idx}, layer-{layer_idx}, head-{i}": 
+                wandb.Image(head_normalized_cls_to_patch_attentions)})
     def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor, log_level : int = None) -> float:
         """
         Performs a single training step on the given inputs and targets.
@@ -240,8 +260,13 @@ class BaseTrainer:
         """
         Callback function that is called at the start of the validation step.
         """
-        self.log_batch = True
-        self.model.register_hooks()
+        if self.log_interval > 0:
+            if self.since_last_log % self.log_interval == 0:
+                self.since_last_log = 0
+                self.log_batch = True
+                self.model.register_hooks()
+            else:
+                self.since_last_log += 1
     
     def on_validation_end(self, val_loss: float) -> None:
         
