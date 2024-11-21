@@ -3,7 +3,7 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 
-class MultiheadDynamicSelfAttention(nn.Module):
+class MultiheadSelfAttention(nn.Module):
     """
     A vanilla multi-head masked self-attention layer with a projection at the end.
     It is possible to use torch.nn.MultiheadAttention here but I am including an

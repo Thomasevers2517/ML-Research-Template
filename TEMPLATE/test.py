@@ -33,8 +33,8 @@ if __name__ == '__main__':
     # num_layers=1, hidden_size=50).to(device)
     
     model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
-                    num_layers=8, embedding_size=128, num_heads=4, 
-                    patch_size=1, T_Threshold=0.01).to(device)
+                    num_layers=4, embedding_size=64, num_heads=4, 
+                    patch_size=1, T_Threshold=0.001).to(device)
     wandb.watch(model)
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.0002)
