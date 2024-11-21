@@ -38,14 +38,12 @@ class Block(nn.Module):
         self.attn = MultiheadSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
                                            attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold)
         self.ln_2 = nn.LayerNorm(n_embd)
-        self.mlp = nn.ModuleDict(dict(
-            c_fc    = nn.Linear(n_embd, 4 * n_embd),
-            c_proj  = nn.Linear(4 * n_embd, n_embd),
-            act     = NewGELU(),
-            dropout = nn.Dropout(resid_pdrop),
-        ))
-        m = self.mlp
-        self.mlpf = lambda x: m.dropout(m.c_proj(m.act(m.c_fc(x)))) # MLP forward
+
+        self.mlpf = nn.Sequential(
+            nn.Linear(n_embd, 4 * n_embd),
+            NewGELU(),
+            nn.Linear(4 * n_embd, n_embd),
+            nn.Dropout(resid_pdrop))
 
     def forward(self, x):
         """ Forward pass for the Block class """

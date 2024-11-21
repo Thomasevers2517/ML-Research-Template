@@ -10,7 +10,8 @@ import re
 from src.utils.logging.WandbLogger import WandbLogger
 
 class BaseTrainer:
-    def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: Callable, device: torch.device, 
+    def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, 
+                 loss_fn: Callable, device: torch.device, data_parallel: bool,
                  val_interval: int = 1, log_interval: int = 1):
         """
         Initializes the BaseTrainer with the given model, data loaders, optimizer, loss function, and device.
@@ -31,6 +32,7 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = device
+        self.data_parallel = data_parallel
         self.val_interval = val_interval
         self.log_interval = log_interval
         
@@ -78,6 +80,7 @@ class BaseTrainer:
         total_loss = 0
         batch_pbar = tqdm(self.train_loader, desc='Batches', leave=False, mininterval=1)
         for inputs, targets in batch_pbar:
+            # inputs, targets = inputs.to(self.device), targets.to(self.device)
             loss = self.train_batch(inputs, targets)
             total_loss += loss
             
@@ -169,9 +172,11 @@ class BaseTrainer:
         Returns:
             float: The loss value for the batch.
         """
-        
-        inputs, targets = inputs.to(self.device), targets.to(self.device)
+        if not self.data_parallel:
+            inputs = inputs.to(self.device)
         outputs = self.model(inputs)
+        targets = targets.to(self.device)
+
         loss = self.loss_fn(outputs, targets)
         
         
