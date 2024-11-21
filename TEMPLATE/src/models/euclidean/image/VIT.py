@@ -4,7 +4,7 @@ from src.models.euclidean.base.BaseModule import BaseModule
 from src.models.euclidean.base.Tranformer.Transformer import Block
 class VIT(BaseModule):
     def __init__(self, input_shape: tuple, output_shape: tuple, num_layers: int, embedding_size: int, 
-                 num_heads: int, patch_size: int, dropout: float = 0.4):
+                 num_heads: int, patch_size: int, dropout: float = 0.4, T_Threshold=0):
         super(VIT, self).__init__(input_shape=input_shape, output_shape=output_shape)
         
         self.patch_size = patch_size
@@ -20,7 +20,8 @@ class VIT(BaseModule):
         self.positional_embeddings = nn.Parameter(torch.zeros(1, self.num_patches + 1, self.embed_dim))
 
         # Transformer encoder
-        self.transformer = nn.Sequential(*[Block( self.num_patches+1, self.embed_dim, num_heads, dropout, dropout) for _ in range(num_layers)])
+        self.transformer = nn.Sequential(*[Block(self.num_patches+1, self.embed_dim, num_heads, 
+                                                 dropout, dropout, T_Threshold=T_Threshold) for _ in range(num_layers)])
 
         # MLP head for classification
         self.mlp_cls = nn.Linear(self.embed_dim, self.output_size)

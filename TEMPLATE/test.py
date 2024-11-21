@@ -20,7 +20,7 @@ if __name__ == '__main__':
     # Initialize wandb
     wandb.init(project="template_test", dir="TEMPLATE/log")
 
-    train_loader, val_loader, test_loader = Image_Dataloader.get_dataloaders(dataset_name='MNIST', data_dir='TEMPLATE\data', batch_size=64)
+    train_loader, val_loader, test_loader = Image_Dataloader.get_dataloaders(dataset_name='CIFAR10', data_dir='data', batch_size=32)
     
     inputs, targets = next(iter(train_loader))
 
@@ -33,12 +33,13 @@ if __name__ == '__main__':
     # num_layers=1, hidden_size=50).to(device)
     
     model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
-                    num_layers=2, embedding_size=16, num_heads=2, patch_size=1).to(device)
+                    num_layers=8, embedding_size=128, num_heads=4, 
+                    patch_size=1, T_Threshold=0.01).to(device)
     wandb.watch(model)
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0005)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0002)
     loss_fn = torch.nn.CrossEntropyLoss()
-    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device)
+    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, log_interval=4)
     
     trainer.train(epochs=1500)
     wandb.log({"test_loss": trainer.test(test_loader=test_loader)})

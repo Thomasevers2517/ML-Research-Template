@@ -2,14 +2,15 @@ import torch
 import torch.nn as nn
 import math
 import torch.nn.functional as F
-class MultiheadSelfAttention(nn.Module):
+
+class MultiheadDynamicSelfAttention(nn.Module):
     """
     A vanilla multi-head masked self-attention layer with a projection at the end.
     It is possible to use torch.nn.MultiheadAttention here but I am including an
     explicit implementation here to show that there is nothing too scary here.
     """
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0):
         
         super().__init__()
         assert n_embd % n_head == 0
@@ -28,6 +29,7 @@ class MultiheadSelfAttention(nn.Module):
         
         self.n_head = n_head
         self.n_embd = n_embd
+        self.T_Threshold = T_Threshold
 
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
@@ -42,6 +44,7 @@ class MultiheadSelfAttention(nn.Module):
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
         # att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
+        att = F.relu(att - self.T_Threshold)
         att = self.att_map(att)
         att = self.attn_dropout(att)
         y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)

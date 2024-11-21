@@ -7,6 +7,7 @@ import wandb
 from tqdm import tqdm
 import numpy as np
 import re
+from src.utils.logging.WandbLogger import WandbLogger
 
 class BaseTrainer:
     def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: Callable, device: torch.device, 
@@ -32,6 +33,8 @@ class BaseTrainer:
         self.device = device
         self.val_interval = val_interval
         self.log_interval = log_interval
+        
+        self.logger = WandbLogger(model)
         
         # Flag to check if it is the first batch of a validation step
         self.log_batch = False
@@ -126,60 +129,14 @@ class BaseTrainer:
             self.log_batch = False    
         pass
     def log_hooks(self) -> None:
-        self.log_activations(self.model.activations)
+        self.logger.log_activations(activations=self.model.activations)
         self.model.remove_hooks()
 
         
-    def log_activations(self, activations: dict, n_samples_to_log:int=1) -> None:
-        """
-        Logs the activations of the model.
-
-        Args:
-            activations (dict): A dictionary containing the activations of the model.
-        """
-        if n_samples_to_log > len(activations[list(activations.keys())[0]]):
-            n_samples_to_log = len(activations[list(activations.keys())[0]])
-            raise Warning("num_samples_to_log is greater than the number of samples in the batch")
-        
-        for sample_idx in range(n_samples_to_log):
-            for name, activation in activations.items():
-                activation = activation.cpu().numpy()
-                if re.match(r"transformer\.\d+\.attn\.att_map", name):
-                    self.log_att_map(name=name, sample_idx=sample_idx , att_map=activation[sample_idx])
-                    
-        self.model.activations.clear()
-        
-    def log_att_map(self, name, sample_idx, att_map: np.ndarray) -> None:
-        
-        self.log_cls_attmap(name, sample_idx, att_map)
-                       
-    def log_cls_attmap(self, name, sample_idx, att_map: np.ndarray) -> None:
-        if len(att_map.shape) == 2:
-            nH = 1
-        else:
-            nH = att_map.shape[0] # Number of heads
-            
-        patch_to_cls_attentions = att_map[:, 1:, 0] 
-        cls_to_patch_attentions = att_map[:, 0, 1:]
-        patch_to_cls_attentions = np.reshape(patch_to_cls_attentions, (nH, 
-                                                        int(self.model.input_shape[1]/self.model.patch_size), 
-                                                        int(self.model.input_shape[2]/self.model.patch_size)))
-        cls_to_patch_attentions = np.reshape(patch_to_cls_attentions, (nH, 
-                                                        int(self.model.input_shape[1]/self.model.patch_size), 
-                                                        int(self.model.input_shape[2]/self.model.patch_size)))
 
         
-        layer_idx = name.split('.')[1]
-        
-        for i in range(nH):
-            max_val_cls_to_patch = np.max(cls_to_patch_attentions[i,:,:])
-            head_normalized_cls_to_patch_attentions = cls_to_patch_attentions[i,:,:] / max_val_cls_to_patch
 
-            wandb.log({f"Name-- patch_to_cls_att, sample_idx-{sample_idx}, layer-{layer_idx}, head-{i}":
-                wandb.Image(patch_to_cls_attentions[i,:,:])})
-            
-            wandb.log({f"Name-- head_normalized_cls_to_patch_att, sample_idx-{sample_idx}, layer-{layer_idx}, head-{i}": 
-                wandb.Image(head_normalized_cls_to_patch_attentions)})
+        
     def train_batch(self, inputs: torch.Tensor, targets: torch.Tensor, log_level : int = None) -> float:
         """
         Performs a single training step on the given inputs and targets.
