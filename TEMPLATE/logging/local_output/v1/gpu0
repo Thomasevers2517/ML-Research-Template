@@ -1,0 +1,203 @@
+wandb: Starting wandb agent 🕵️
+2024-11-25 12:58:57,351 - wandb.wandb_agent - INFO - Running runs: []
+2024-11-25 12:58:57,648 - wandb.wandb_agent - INFO - Agent received command: run
+2024-11-25 12:58:57,648 - wandb.wandb_agent - INFO - Agent starting run with config:
+	DATA_LOADER: Image_Dataloader
+	DATA_LOADER_PARAMS: {'BATCH_SIZE': 8, 'DATASET_NAME': 'CIFAR100', 'DATA_DIR': 'data'}
+	LOSS_FN: CrossEntropyLoss
+	MODEL: VIT
+	MODEL_PARAMS: {'EMBEDDING_SIZE': 256, 'NUM_HEADS': 4, 'NUM_LAYERS': 8, 'PATCH_SIZE': 1, 'T_THRESHOLD': 0.001}
+	OPTIMIZER: AdamW
+	OPTIMIZER_PARAMS: {'LR': 0.0001, 'LR_SCHEDULER': 'None', 'NUM_EPOCHS': 250}
+	TEST_RUN: False
+	TRAINER: BaseTrainer
+	TRAINER_PARAMS: {'DATA_PARALLEL': True, 'LOG_INTERVAL': 20, 'VAL_INTERVAL': 1}
+2024-11-25 12:58:57,652 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python TEMPLATE/main.py --DATA_LOADER=Image_Dataloader "--DATA_LOADER_PARAMS={'BATCH_SIZE': 8, 'DATASET_NAME': 'CIFAR100', 'DATA_DIR': 'data'}" --LOSS_FN=CrossEntropyLoss --MODEL=VIT "--MODEL_PARAMS={'EMBEDDING_SIZE': 256, 'NUM_HEADS': 4, 'NUM_LAYERS': 8, 'PATCH_SIZE': 1, 'T_THRESHOLD': 0.001}" --OPTIMIZER=AdamW "--OPTIMIZER_PARAMS={'LR': 0.0001, 'LR_SCHEDULER': 'None', 'NUM_EPOCHS': 250}" --TEST_RUN=False --TRAINER=BaseTrainer "--TRAINER_PARAMS={'DATA_PARALLEL': True, 'LOG_INTERVAL': 20, 'VAL_INTERVAL': 1}"
+2024-11-25 12:59:02,664 - wandb.wandb_agent - INFO - Running runs: ['ag4rwqnh']
+wandb: Currently logged in as: thomasevers9. Use `wandb login --relogin` to force relogin
+wandb: WARNING Ignored wandb.init() arg project when running a sweep.
+wandb: WARNING Path TEMPLATE/log/wandb/ wasn't writable, using system temp directory.
+wandb: WARNING Path TEMPLATE/log/wandb/ wasn't writable, using system temp directory
+wandb: Tracking run with wandb version 0.18.7
+wandb: Run data is saved locally in /tmp/wandb/run-20241125_125903-ag4rwqnh
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run worldly-sweep-1
+wandb: ⭐️ View project at https://wandb.ai/thomasevers9/ML-Research-Template-TEMPLATE
+wandb: 🧹 View sweep at https://wandb.ai/thomasevers9/ML-Research-Template-TEMPLATE/sweeps/qcgatfun
+wandb: 🚀 View run at https://wandb.ai/thomasevers9/ML-Research-Template-TEMPLATE/runs/ag4rwqnh
+CONFIGURATION 
+ {'TEST_RUN': False, 'MODEL': 'VIT', 'MODEL_PARAMS': {'NUM_LAYERS': 8, 'EMBEDDING_SIZE': 256, 'NUM_HEADS': 4, 'PATCH_SIZE': 1, 'T_THRESHOLD': 0.001}, 'OPTIMIZER': 'AdamW', 'OPTIMIZER_PARAMS': {'LR': 0.0001, 'NUM_EPOCHS': 250, 'LR_SCHEDULER': 'None'}, 'LOSS_FN': 'CrossEntropyLoss', 'TRAINER': 'BaseTrainer', 'TRAINER_PARAMS': {'LOG_INTERVAL': 20, 'VAL_INTERVAL': 1, 'DATA_PARALLEL': True}, 'DATA_LOADER': 'Image_Dataloader', 'DATA_LOADER_PARAMS': {'DATASET_NAME': 'CIFAR100', 'DATA_DIR': 'data', 'BATCH_SIZE': 8}, 'WANDB_LOGGING_PARAMS': {'PROJECT': 'template_test', 'DIR': 'TEMPLATE/log'}, 'EARLY_STOPPING_PARAMS': {'PATIENCE': 10, 'DELTA': 0.001, 'VERBOSE': False}}
+Using devices: cuda:0 and DATA_PARALLEL: True
+Files already downloaded and verified
+Files already downloaded and verified
+Input shape: torch.Size([3, 32, 32]), Output shape: (100,)
+Compiling model
+Model compiled
+Epochs:   0%|          | 0/250 [00:00<?, ?it/s]
+Batches:   0%|          | 0/5625 [00:00<?, ?it/s][AW1125 12:59:09.248000 634993 site-packages/torch/_logging/_internal.py:1081] [0/0] Profiler function <class 'torch.autograd.profiler.record_function'> will be ignored
+
+Batches:   0%|          | 1/5625 [00:08<14:00:37,  8.97s/it][A
+Batches:   0%|          | 23/5625 [00:09<29:56,  3.12it/s]  [A
+Batches:   1%|          | 45/5625 [00:10<15:00,  6.19it/s][A
+Batches:   1%|          | 67/5625 [00:12<10:07,  9.16it/s][A
+Batches:   2%|▏         | 89/5625 [00:13<07:47, 11.84it/s][A
+Batches:   2%|▏         | 111/5625 [00:14<06:30, 14.12it/s][A
+Batches:   2%|▏         | 133/5625 [00:15<05:43, 15.97it/s][A
+Batches:   3%|▎         | 155/5625 [00:16<05:14, 17.40it/s][A
+Batches:   3%|▎         | 177/5625 [00:17<04:53, 18.54it/s][A
+Batches:   4%|▎         | 199/5625 [00:18<04:39, 19.42it/s][A
+Batches:   4%|▍         | 221/5625 [00:19<04:29, 20.06it/s][A
+Batches:   4%|▍         | 243/5625 [00:20<04:22, 20.52it/s][A
+Batches:   5%|▍         | 265/5625 [00:21<04:17, 20.81it/s][A
+Batches:   5%|▌         | 287/5625 [00:22<04:14, 20.95it/s][A
+Batches:   5%|▌         | 309/5625 [00:23<04:12, 21.05it/s][A
+Batches:   6%|▌         | 331/5625 [00:24<04:09, 21.19it/s][A
+Batches:   6%|▋         | 353/5625 [00:25<04:07, 21.34it/s][A
+Batches:   7%|▋         | 375/5625 [00:26<04:04, 21.45it/s][A
+Batches:   7%|▋         | 397/5625 [00:27<04:02, 21.54it/s][A
+Batches:   7%|▋         | 419/5625 [00:28<04:00, 21.62it/s][A
+Batches:   8%|▊         | 441/5625 [00:29<03:59, 21.66it/s][A
+Batches:   8%|▊         | 463/5625 [00:30<03:57, 21.70it/s][A
+Batches:   9%|▊         | 485/5625 [00:31<03:56, 21.72it/s][A
+Batches:   9%|▉         | 507/5625 [00:32<03:55, 21.73it/s][A
+Batches:   9%|▉         | 529/5625 [00:33<03:55, 21.68it/s][A
+Batches:  10%|▉         | 551/5625 [00:34<03:55, 21.58it/s][A
+Batches:  10%|█         | 573/5625 [00:35<03:54, 21.56it/s][A
+Batches:  11%|█         | 595/5625 [00:36<03:53, 21.53it/s][A
+Batches:  11%|█         | 617/5625 [00:37<03:52, 21.56it/s][A
+Batches:  11%|█▏        | 639/5625 [00:38<03:52, 21.42it/s][A
+Batches:  12%|█▏        | 661/5625 [00:39<03:51, 21.41it/s][A
+Batches:  12%|█▏        | 683/5625 [00:40<03:51, 21.35it/s][A
+Batches:  13%|█▎        | 705/5625 [00:41<03:50, 21.38it/s][A
+Batches:  13%|█▎        | 727/5625 [00:42<03:49, 21.38it/s][A
+Batches:  13%|█▎        | 749/5625 [00:43<03:49, 21.27it/s][A
+Batches:  14%|█▎        | 771/5625 [00:44<03:47, 21.35it/s][A
+Batches:  14%|█▍        | 793/5625 [00:45<03:46, 21.37it/s][A
+Batches:  14%|█▍        | 815/5625 [00:46<03:44, 21.38it/s][A
+Batches:  15%|█▍        | 837/5625 [00:47<03:44, 21.35it/s][A
+Batches:  15%|█▌        | 859/5625 [00:48<03:44, 21.22it/s][A
+Batches:  16%|█▌        | 881/5625 [00:49<03:43, 21.22it/s][A
+Batches:  16%|█▌        | 903/5625 [00:50<03:41, 21.28it/s][A
+Batches:  16%|█▋        | 925/5625 [00:51<03:40, 21.31it/s][A
+Batches:  17%|█▋        | 947/5625 [00:52<03:39, 21.34it/s][A
+Batches:  17%|█▋        | 969/5625 [00:54<03:38, 21.35it/s][A
+Batches:  18%|█▊        | 991/5625 [00:55<03:37, 21.34it/s][A
+Batches:  18%|█▊        | 1013/5625 [00:56<03:37, 21.25it/s][A
+Batches:  18%|█▊        | 1035/5625 [00:57<03:36, 21.16it/s][A
+Batches:  19%|█▉        | 1057/5625 [00:58<03:37, 21.05it/s][A
+Batches:  19%|█▉        | 1079/5625 [00:59<03:35, 21.08it/s][A
+Batches:  20%|█▉        | 1101/5625 [01:00<03:34, 21.13it/s][A
+Batches:  20%|█▉        | 1123/5625 [01:01<03:33, 21.07it/s][A
+Batches:  20%|██        | 1145/5625 [01:02<03:32, 21.05it/s][A
+Batches:  21%|██        | 1167/5625 [01:03<03:32, 21.03it/s][A
+Batches:  21%|██        | 1189/5625 [01:04<03:31, 21.00it/s][A
+Batches:  22%|██▏       | 1211/5625 [01:05<03:29, 21.03it/s][A
+Batches:  22%|██▏       | 1233/5625 [01:06<03:27, 21.20it/s][A
+Batches:  22%|██▏       | 1255/5625 [01:07<03:25, 21.27it/s][A
+Batches:  23%|██▎       | 1277/5625 [01:08<03:25, 21.20it/s][A
+Batches:  23%|██▎       | 1299/5625 [01:09<03:25, 21.05it/s][A
+Batches:  23%|██▎       | 1321/5625 [01:10<03:23, 21.10it/s][A
+Batches:  24%|██▍       | 1343/5625 [01:11<03:23, 21.05it/s][A
+Batches:  24%|██▍       | 1365/5625 [01:12<03:22, 21.07it/s][A
+Batches:  25%|██▍       | 1387/5625 [01:13<03:21, 21.04it/s][A
+Batches:  25%|██▌       | 1409/5625 [01:14<03:20, 21.04it/s][A
+Batches:  25%|██▌       | 1431/5625 [01:15<03:19, 21.00it/s][A
+Batches:  26%|██▌       | 1453/5625 [01:16<03:19, 20.96it/s][A
+Batches:  26%|██▌       | 1475/5625 [01:18<03:17, 20.99it/s][A
+Batches:  27%|██▋       | 1497/5625 [01:19<03:16, 21.00it/s][A
+Batches:  27%|██▋       | 1519/5625 [01:20<03:15, 21.01it/s][A
+Batches:  27%|██▋       | 1541/5625 [01:21<03:14, 20.95it/s][A
+Batches:  28%|██▊       | 1562/5625 [01:22<03:14, 20.87it/s][A
+Batches:  28%|██▊       | 1584/5625 [01:23<03:13, 20.92it/s][A
+Batches:  29%|██▊       | 1606/5625 [01:24<03:11, 21.04it/s][A
+Batches:  29%|██▉       | 1628/5625 [01:25<03:09, 21.12it/s][A
+Batches:  29%|██▉       | 1650/5625 [01:26<03:07, 21.21it/s][A
+Batches:  30%|██▉       | 1672/5625 [01:27<03:06, 21.19it/s][A
+Batches:  30%|███       | 1694/5625 [01:28<03:05, 21.23it/s][A
+Batches:  31%|███       | 1716/5625 [01:29<03:03, 21.28it/s][A
+Batches:  31%|███       | 1738/5625 [01:30<03:02, 21.32it/s][A
+Batches:  31%|███▏      | 1760/5625 [01:31<03:02, 21.22it/s][A
+Batches:  32%|███▏      | 1782/5625 [01:32<03:00, 21.29it/s][A
+Batches:  32%|███▏      | 1804/5625 [01:33<02:59, 21.34it/s][A
+Batches:  32%|███▏      | 1826/5625 [01:34<02:58, 21.33it/s][A
+Batches:  33%|███▎      | 1848/5625 [01:35<02:57, 21.32it/s][A
+Batches:  33%|███▎      | 1870/5625 [01:36<02:56, 21.29it/s][A
+Batches:  34%|███▎      | 1892/5625 [01:37<02:55, 21.25it/s][A
+Batches:  34%|███▍      | 1914/5625 [01:38<02:54, 21.26it/s][A
+Batches:  34%|███▍      | 1936/5625 [01:39<02:53, 21.26it/s][A
+Batches:  35%|███▍      | 1958/5625 [01:40<02:52, 21.26it/s][A
+Batches:  35%|███▌      | 1980/5625 [01:41<02:51, 21.26it/s][A
+Batches:  36%|███▌      | 2002/5625 [01:42<02:50, 21.24it/s][A
+Batches:  36%|███▌      | 2024/5625 [01:43<02:49, 21.24it/s][A
+Batches:  36%|███▋      | 2046/5625 [01:44<02:48, 21.21it/s][A
+Batches:  37%|███▋      | 2068/5625 [01:46<02:48, 21.13it/s][A
+Batches:  37%|███▋      | 2090/5625 [01:47<02:47, 21.13it/s][A
+Batches:  38%|███▊      | 2112/5625 [01:48<02:45, 21.17it/s][A
+Batches:  38%|███▊      | 2134/5625 [01:49<02:45, 21.13it/s][A
+Batches:  38%|███▊      | 2156/5625 [01:50<02:44, 21.03it/s][A
+Batches:  39%|███▊      | 2178/5625 [01:51<02:44, 20.95it/s][A
+Batches:  39%|███▉      | 2200/5625 [01:52<02:43, 20.98it/s][A
+Batches:  40%|███▉      | 2222/5625 [01:53<02:41, 21.10it/s][A
+Batches:  40%|███▉      | 2244/5625 [01:54<02:40, 21.07it/s][A
+Batches:  40%|████      | 2266/5625 [01:55<02:38, 21.15it/s][A
+Batches:  41%|████      | 2288/5625 [01:56<02:37, 21.24it/s][A
+Batches:  41%|████      | 2310/5625 [01:57<02:35, 21.29it/s][A
+Batches:  41%|████▏     | 2332/5625 [01:58<02:34, 21.35it/s][A
+Batches:  42%|████▏     | 2354/5625 [01:59<02:32, 21.39it/s][A
+Batches:  42%|████▏     | 2376/5625 [02:00<02:31, 21.44it/s][A
+Batches:  43%|████▎     | 2398/5625 [02:01<02:30, 21.47it/s][A
+Batches:  43%|████▎     | 2420/5625 [02:02<02:29, 21.49it/s][A
+Batches:  43%|████▎     | 2442/5625 [02:03<02:28, 21.39it/s][A
+Batches:  44%|████▍     | 2464/5625 [02:04<02:28, 21.30it/s][A
+Batches:  44%|████▍     | 2486/5625 [02:05<02:28, 21.14it/s][A
+Batches:  45%|████▍     | 2508/5625 [02:06<02:28, 20.94it/s][A
+Batches:  45%|████▍     | 2530/5625 [02:07<02:27, 21.04it/s][A
+Batches:  45%|████▌     | 2552/5625 [02:08<02:26, 21.00it/s][A
+Batches:  46%|████▌     | 2574/5625 [02:09<02:25, 21.03it/s][A
+Batches:  46%|████▌     | 2596/5625 [02:10<02:23, 21.15it/s][A
+Batches:  47%|████▋     | 2618/5625 [02:11<02:21, 21.23it/s][A
+Batches:  47%|████▋     | 2640/5625 [02:13<02:20, 21.26it/s][A
+Batches:  47%|████▋     | 2662/5625 [02:14<02:19, 21.29it/s][A
+Batches:  48%|████▊     | 2684/5625 [02:15<02:18, 21.29it/s][A
+Batches:  48%|████▊     | 2706/5625 [02:16<02:16, 21.31it/s][A
+Batches:  48%|████▊     | 2728/5625 [02:17<02:15, 21.32it/s][A
+Batches:  49%|████▉     | 2750/5625 [02:18<02:14, 21.32it/s][A
+Batches:  49%|████▉     | 2772/5625 [02:19<02:14, 21.20it/s][A
+Batches:  50%|████▉     | 2794/5625 [02:20<02:14, 21.09it/s][A
+Batches:  50%|█████     | 2816/5625 [02:21<02:12, 21.18it/s][A
+Batches:  50%|█████     | 2838/5625 [02:22<02:11, 21.21it/s][A
+Batches:  51%|█████     | 2860/5625 [02:23<02:10, 21.24it/s][A
+Batches:  51%|█████     | 2882/5625 [02:24<02:08, 21.29it/s][A
+Batches:  52%|█████▏    | 2904/5625 [02:25<02:08, 21.20it/s][A
+Batches:  52%|█████▏    | 2926/5625 [02:26<02:07, 21.18it/s][A
+Batches:  52%|█████▏    | 2948/5625 [02:27<02:06, 21.22it/s][A
+Batches:  53%|█████▎    | 2970/5625 [02:28<02:05, 21.23it/s][A
+Batches:  53%|█████▎    | 2992/5625 [02:29<02:04, 21.21it/s][A
+Batches:  54%|█████▎    | 3014/5625 [02:30<02:03, 21.13it/s][A
+Batches:  54%|█████▍    | 3036/5625 [02:31<02:02, 21.09it/s][A
+Batches:  54%|█████▍    | 3058/5625 [02:32<02:01, 21.07it/s][A
+Batches:  55%|█████▍    | 3080/5625 [02:33<02:00, 21.16it/s][A
+Batches:  55%|█████▌    | 3102/5625 [02:34<01:58, 21.23it/s][A
+Batches:  56%|█████▌    | 3124/5625 [02:35<01:57, 21.27it/s][A
+Batches:  56%|█████▌    | 3146/5625 [02:36<01:56, 21.30it/s][A
+Batches:  56%|█████▋    | 3168/5625 [02:37<01:55, 21.30it/s][A
+Batches:  57%|█████▋    | 3190/5625 [02:38<01:54, 21.24it/s][A
+Batches:  57%|█████▋    | 3212/5625 [02:39<01:54, 21.16it/s][A
+Batches:  57%|█████▋    | 3234/5625 [02:41<01:52, 21.17it/s][A
+Batches:  58%|█████▊    | 3256/5625 [02:42<01:52, 21.14it/s][A
+Batches:  58%|█████▊    | 3278/5625 [02:43<01:51, 21.09it/s][A
+Batches:  59%|█████▊    | 3300/5625 [02:44<01:50, 21.06it/s][A
+Batches:  59%|█████▉    | 3322/5625 [02:45<01:49, 21.03it/s][A
+Batches:  59%|█████▉    | 3344/5625 [02:46<01:48, 21.00it/s][A
+Batches:  60%|█████▉    | 3366/5625 [02:47<01:47, 20.97it/s][A
+Batches:  60%|██████    | 3387/5625 [02:48<01:46, 20.98it/s][A
+Batches:  61%|██████    | 3408/5625 [02:49<01:45, 20.97it/s][A
+Batches:  61%|██████    | 3430/5625 [02:50<01:44, 21.07it/s][A
+Batches:  61%|██████▏   | 3452/5625 [02:51<01:42, 21.14it/s][A
+Batches:  62%|██████▏   | 3474/5625 [02:52<01:42, 21.05it/s][A
+Batches:  62%|██████▏   | 3496/5625 [02:53<01:41, 21.04it/s][A
+Batches:  63%|██████▎   | 3518/5625 [02:54<01:39, 21.10it/s][A
+Batches:  63%|██████▎   | 3540/5625 [02:55<01:38, 21.11it/s][A
+Batches:  63%|██████▎   | 3562/5625 [02:56<01:37, 21.07it/s][A
+Batches:  64%|██████▎   | 3584/5625 [02:57<01:36, 21.05it/s][A
+Batches:  64%|██████▍   | 3606/5625 [02:58<01:36, 21.03it/s][A
