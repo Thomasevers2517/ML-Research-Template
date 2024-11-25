@@ -12,7 +12,7 @@ from src.utils.logging.WandbLogger import WandbLogger
 class BaseTrainer:
     def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, 
                  loss_fn: Callable, device: torch.device, data_parallel: bool,
-                 val_interval: int = 1, log_interval: int = 1):
+                 val_interval: int = 1, log_interval: int = 1, EarlyStopper = None):
         """
         Initializes the BaseTrainer with the given model, data loaders, optimizer, loss function, and device.
 
@@ -36,13 +36,18 @@ class BaseTrainer:
         self.val_interval = val_interval
         self.log_interval = log_interval
         
-        self.logger = WandbLogger(model)
+        if self.data_parallel: 
+            self.logger = WandbLogger(model.module)
+        else:
+            self.logger = WandbLogger(model)
         
         # Flag to check if it is the first batch of a validation step
         self.log_batch = False
         
         # Counter to keep track of the number of validation steps since the last log
         self.since_last_log = 0
+        
+        self.EarlyStopper = EarlyStopper
         
     def train(self, epochs: int) -> None:
         """
@@ -53,10 +58,17 @@ class BaseTrainer:
         """
         epoch_pbar = tqdm(range(epochs), desc='Epochs')
         for epoch in epoch_pbar:
+
             avg_train_loss = self.train_epoch(epoch=epoch)
             
             if epoch % self.val_interval == 0:
                 val_loss = self.validate()
+                if self.EarlyStopper.check_improvement(val_loss):
+                    torch.save(self.model.state_dict(), 'best_model.pth')
+
+                    break
+
+                
             
             epoch_pbar.set_postfix({
             'train_loss': f'{avg_train_loss:.4f}',
@@ -80,7 +92,6 @@ class BaseTrainer:
         total_loss = 0
         batch_pbar = tqdm(self.train_loader, desc='Batches', leave=False, mininterval=1)
         for inputs, targets in batch_pbar:
-            # inputs, targets = inputs.to(self.device), targets.to(self.device)
             loss = self.train_batch(inputs, targets)
             total_loss += loss
             
@@ -132,8 +143,12 @@ class BaseTrainer:
             self.log_batch = False    
         pass
     def log_hooks(self) -> None:
-        self.logger.log_activations(activations=self.model.activations)
-        self.model.remove_hooks()
+        if self.data_parallel:
+            self.logger.log_activations(activations=self.model.module.activations)
+            self.model.module.remove_hooks()
+        else:
+            self.logger.log_activations(activations=self.model.activations)
+            self.model.remove_hooks()
 
         
 
@@ -222,13 +237,7 @@ class BaseTrainer:
         """
         Callback function that is called at the start of the validation step.
         """
-        if self.log_interval > 0:
-            if self.since_last_log % self.log_interval == 0:
-                self.since_last_log = 0
-                self.log_batch = True
-                self.model.register_hooks()
-            else:
-                self.since_last_log += 1
+        pass
     
     def on_validation_end(self, val_loss: float) -> None:
         
@@ -238,6 +247,7 @@ class BaseTrainer:
         wandb.log({
             "val_loss": val_loss
         })
+        pass
         
     
     

@@ -1,0 +1,66 @@
+
+
+program: TEMPLATE/main.py
+method: grid
+metric:
+  name: validation_loss
+  goal: minimize
+parameters:
+  MODEL:
+    values: ["VIT"]
+      
+  MODEL_PARAMS:
+    parameters:
+      NUM_LAYERS:
+        values: [8]
+      EMBEDDING_SIZE:
+        values: [256]
+      NUM_HEADS:
+        values: [8]
+      PATCH_SIZE: 
+        values: [1]
+      T_THRESHOLD:
+        values: [0.0001, 0.001, 0]
+
+  OPTIMIZER: 
+      values: ["AdamW"]
+
+  OPTIMIZER_PARAMS:
+    parameters:
+      LR:
+        values: [0.0001]
+      NUM_EPOCHS:
+        values: [150]
+      LR_SCHEDULER:
+        values: ["None"]
+
+  LOSS_FN: 
+      values: ["CrossEntropyLoss"]
+
+  TRAINER: 
+      values: ["BaseTrainer"]
+  TRAINER_PARAMS:
+    parameters:
+      LOG_INTERVAL:
+        values: [20]
+      VAL_INTERVAL:
+        values: [1]
+      DEVICES:
+        values: [[0]]
+
+  DATA_LOADER: 
+      values: ["Image_Dataloader"]
+
+  DATA_LOADER_PARAMS:
+    parameters:
+      DATASET_NAME:
+        values: ["CIFAR10"]
+      DATA_DIR:
+        values: ["data"]
+      BATCH_SIZE:
+        values: [32]
+
+
+
+
+  

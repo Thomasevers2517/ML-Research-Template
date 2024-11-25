@@ -4,9 +4,18 @@ import src.models.euclidean.image.ImageMLP as ImageMLP
 import src.models.euclidean.image.VIT as VIT
 import torch
 import wandb
-from configs.training.single_run_config import TRAIN_CONFIG
+import yaml
+from src.utils.EarlyStopping.BaseEarlyStopping import BaseEarlyStopping
+
 
 if __name__ == '__main__':
+    with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
+        DF_TRAIN_CONFIG = yaml.safe_load(f)["TRAIN_CONFIG"]
+        
+    wandb.init(project=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["PROJECT"], 
+               dir=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["DIR"], config=DF_TRAIN_CONFIG)
+    TRAIN_CONFIG = wandb.config
+    
     print("CONFIGURATION \n", TRAIN_CONFIG)
     
     torch.manual_seed(0)
@@ -24,10 +33,9 @@ if __name__ == '__main__':
         DATA_PARALLEL = False
         device = torch.device('cpu')
         
-    print(f"Using device: {device} and DATA_PARALLEL: {DATA_PARALLEL}")
+    print(f"Using devices: {TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES']} and DATA_PARALLEL: {DATA_PARALLEL}")
     
     # Initialize wandb
-    wandb.init(project=TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["PROJECT"], dir=TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["DIR"])
 
     if TRAIN_CONFIG['DATA_LOADER'] == 'Image_Dataloader':
         train_loader, val_loader, test_loader = Image_Dataloader.get_dataloaders(dataset_name=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["DATASET_NAME"], 
@@ -52,15 +60,24 @@ if __name__ == '__main__':
                     T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD']).to(device)
     
     if DATA_PARALLEL:
-        model = torch.nn.DATA_PARALLEL(model, device_ids=TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES'])
+        model = torch.nn.DataParallel(model, device_ids=TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES'])
     model = model.to(device)
     wandb.watch(model)
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0002)
-    loss_fn = torch.nn.CrossEntropyLoss()
-    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=DATA_PARALLEL, log_interval=4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR'])
+    if TRAIN_CONFIG['LOSS_FN'] == 'CrossEntropyLoss':
+        loss_fn = torch.nn.CrossEntropyLoss()
+    else:
+        raise NotImplementedError(f"Loss function {TRAIN_CONFIG['LOSS_FN']} not implemented")
     
-    trainer.train(epochs=1500)
+    early_stopper = BaseEarlyStopping(patience=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['PATIENCE'], 
+                                      verbose=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['VERBOSE'], 
+                                      delta=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['DELTA'])
+    
+    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=DATA_PARALLEL, 
+                          log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper)
+    
+    trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
     wandb.log({"test_loss": trainer.test(test_loader=test_loader)})
     
     inputs, targets = next(iter(test_loader))
