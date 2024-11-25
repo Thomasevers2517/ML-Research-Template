@@ -1,4 +1,5 @@
 TRAIN_CONFIG:
+    TEST_RUN: False
     MODEL: "VIT"
     MODEL_PARAMS:
         NUM_LAYERS: 2
@@ -16,10 +17,10 @@ TRAIN_CONFIG:
     TRAINER_PARAMS:
         LOG_INTERVAL: 4
         VAL_INTERVAL: 1
-        DEVICES: [0]
+        DATA_PARALLEL: [False]
     DATA_LOADER: "Image_Dataloader"
     DATA_LOADER_PARAMS:
-        DATASET_NAME: "CIFAR10"
+        DATASET_NAME: "CIFAR100"
         DATA_DIR: "data"
         BATCH_SIZE: 32
     WANDB_LOGGING_PARAMS:

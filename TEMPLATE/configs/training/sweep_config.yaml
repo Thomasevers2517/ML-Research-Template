@@ -6,21 +6,23 @@ metric:
   name: validation_loss
   goal: minimize
 parameters:
+  TEST_RUN:
+    values: [False]
   MODEL:
     values: ["VIT"]
       
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [8]
+        values: [8, 16]
       EMBEDDING_SIZE:
         values: [256]
       NUM_HEADS:
-        values: [8]
+        values: [4, 16]
       PATCH_SIZE: 
-        values: [1]
+        values: [1, 2]
       T_THRESHOLD:
-        values: [0.0001, 0.001, 0]
+        values: [0.001, 0.0001, 0]
 
   OPTIMIZER: 
       values: ["AdamW"]
@@ -30,7 +32,7 @@ parameters:
       LR:
         values: [0.0001]
       NUM_EPOCHS:
-        values: [150]
+        values: [250]
       LR_SCHEDULER:
         values: ["None"]
 
@@ -45,8 +47,8 @@ parameters:
         values: [20]
       VAL_INTERVAL:
         values: [1]
-      DEVICES:
-        values: [[0]]
+      DATA_PARALLEL:
+        values: [True]
 
   DATA_LOADER: 
       values: ["Image_Dataloader"]
@@ -54,11 +56,11 @@ parameters:
   DATA_LOADER_PARAMS:
     parameters:
       DATASET_NAME:
-        values: ["CIFAR10"]
+        values: ["CIFAR100"]
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [32]
+        values: [8]
 
 
 

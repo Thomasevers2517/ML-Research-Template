@@ -23,17 +23,15 @@ if __name__ == '__main__':
     if torch.cuda.is_available():
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        if len(TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES']) > 1:
-            DATA_PARALLEL = True
-            device = torch.device(f"cuda:{TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES'][0]}")
+        torch.set_float32_matmul_precision('high')
+        if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
+            device = torch.device(f"cuda:0")
         elif len(TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES']) == 1:
-            DATA_PARALLEL = False
-            device = torch.device(f"cuda:{TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES'][0]}")
+            device = torch.device(f"cuda:0")
     else:
-        DATA_PARALLEL = False
         device = torch.device('cpu')
         
-    print(f"Using devices: {TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES']} and DATA_PARALLEL: {DATA_PARALLEL}")
+    print(f"Using devices: {device} and DATA_PARALLEL: {TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']}")
     
     # Initialize wandb
 
@@ -59,10 +57,14 @@ if __name__ == '__main__':
                     patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
                     T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD']).to(device)
     
-    if DATA_PARALLEL:
-        model = torch.nn.DataParallel(model, device_ids=TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES'])
+    if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
+        model = torch.nn.DataParallel(model)
     model = model.to(device)
-    wandb.watch(model)
+    if TRAIN_CONFIG['TEST_RUN']== False:
+        print("Compiling model")
+        model = torch.compile(model)
+        print("Model compiled")
+    # wandb.watch(model)
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR'])
     if TRAIN_CONFIG['LOSS_FN'] == 'CrossEntropyLoss':
@@ -74,7 +76,7 @@ if __name__ == '__main__':
                                       verbose=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['VERBOSE'], 
                                       delta=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['DELTA'])
     
-    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=DATA_PARALLEL, 
+    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL'], 
                           log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper)
     
     trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
