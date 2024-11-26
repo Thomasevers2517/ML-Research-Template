@@ -21,8 +21,8 @@ if __name__ == '__main__':
     torch.manual_seed(0)
     
     if torch.cuda.is_available():
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+        # torch.backends.cudnn.deterministic = True
+        # torch.backends.cudnn.benchmark = False
         torch.set_float32_matmul_precision('high')
         if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
             device = torch.device(f"cuda:0")
@@ -67,6 +67,14 @@ if __name__ == '__main__':
     # wandb.watch(model)
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR'])
+    if TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR_SCHEDULER'] == 'StepLR':
+        raise NotImplementedError("StepLR not implemented")
+    elif TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR_SCHEDULER'] == 'ReduceLROnPlateau':
+        raise NotImplementedError("ReduceLROnPlateau not implemented")
+    elif TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR_SCHEDULER'] == 'CosineAnnealingLR':
+        print("Using CosineAnnealingLR")
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+                
     if TRAIN_CONFIG['LOSS_FN'] == 'CrossEntropyLoss':
         loss_fn = torch.nn.CrossEntropyLoss()
     else:
@@ -77,7 +85,7 @@ if __name__ == '__main__':
                                       delta=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['DELTA'])
     
     trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL'], 
-                          log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper)
+                          log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper, scheduler=scheduler)
     
     trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
     wandb.log({"test_loss": trainer.test(test_loader=test_loader)})

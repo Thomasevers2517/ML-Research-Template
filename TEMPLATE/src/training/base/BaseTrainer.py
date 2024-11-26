@@ -12,7 +12,7 @@ from src.utils.logging.WandbLogger import WandbLogger
 class BaseTrainer:
     def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, 
                  loss_fn: Callable, device: torch.device, data_parallel: bool,
-                 val_interval: int = 1, log_interval: int = 1, EarlyStopper = None):
+                 val_interval: int = 1, log_interval: int = 1, EarlyStopper = None, scheduler = None):
         """
         Initializes the BaseTrainer with the given model, data loaders, optimizer, loss function, and device.
 
@@ -36,6 +36,7 @@ class BaseTrainer:
         self.val_interval = val_interval
         self.log_interval = log_interval
         
+        
         if self.data_parallel: 
             self.logger = WandbLogger(model.module)
         else:
@@ -48,7 +49,8 @@ class BaseTrainer:
         self.since_last_log = 0
         
         self.EarlyStopper = EarlyStopper
-        
+        self.scheduler = scheduler
+
     def train(self, epochs: int) -> None:
         """
         Trains the model for a specified number of epochs.
@@ -124,6 +126,8 @@ class BaseTrainer:
                 "train_loss": avg_train_loss,
                 "epoch": epoch
             })
+        if self.scheduler:
+            self.scheduler.step()
         
         pass
     

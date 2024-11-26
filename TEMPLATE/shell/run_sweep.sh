@@ -36,7 +36,7 @@ echo "Run sweep agent with: wandb agent thomasevers9/ML-Research-Template-TEMPLA
 # Start the sweep agent using the provided GPU IDs
 echo "Starting sweep agent on GPUs: $@"
 for i in $@; do
-    echo "running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > TEMPLATE/logging/local_output/v1/gpu$i &"
+    echo "running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > TEMPLATE/logging/local_output/v1/gpu$i.txt &"
 
     CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > TEMPLATE/logging/local_output/v1/gpu$i &
 

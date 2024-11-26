@@ -74,13 +74,14 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
     # Kill 'agent' processes
     if [ -n "$agent_pids" ]; then
         echo "Killing 'agent' processes..."
-        kill $agent_pids
+        kill -15 $agent_pids
+        kill -9 $agent_pids
     fi
 
     # Kill GPU processes
     if [ ${#user_gpu_pids[@]} -gt 0 ]; then
         echo "Killing GPU processes..."
-        kill "${user_gpu_pids[@]}"
+        kill -15 "${user_gpu_pids[@]}"
     fi
 
     echo "Processes have been signaled to terminate."

@@ -1,7 +1,7 @@
 
 
 program: TEMPLATE/main.py
-method: grid
+method: random
 metric:
   name: validation_loss
   goal: minimize
@@ -14,15 +14,15 @@ parameters:
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [8, 16]
+        values: [8]
       EMBEDDING_SIZE:
-        values: [256]
+        values: [128]
       NUM_HEADS:
-        values: [4, 16]
+        values: [4]
       PATCH_SIZE: 
         values: [1, 2]
       T_THRESHOLD:
-        values: [0.001, 0.0001, 0]
+        values: [0.001, 0]
 
   OPTIMIZER: 
       values: ["AdamW"]
@@ -32,9 +32,9 @@ parameters:
       LR:
         values: [0.0001]
       NUM_EPOCHS:
-        values: [250]
+        values: [40]
       LR_SCHEDULER:
-        values: ["None"]
+        values: ["CosineAnnealingLR"]
 
   LOSS_FN: 
       values: ["CrossEntropyLoss"]
@@ -60,7 +60,7 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [8]
+        values: [32]
 
 
 
