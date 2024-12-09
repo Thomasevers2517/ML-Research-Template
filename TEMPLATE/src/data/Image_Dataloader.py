@@ -31,7 +31,8 @@ class Image_Data(Dataset):
         elif dataset_name == 'FashionMNIST':
             self.dataset = datasets.FashionMNIST(root=self.full_data_dir, train=self.train, download=True, transform=self.transform)
         elif dataset_name == 'ImageNet':
-            self.dataset = datasets.ImageNet(root=self.full_data_dir, split='train' if self.train else 'val', download=True, transform=self.transform)
+            self.dataset = datasets.ImageNet(root="/space2/thomasevers/data/imagenet", split='train' if self.train else 'val', transform=self.transform)
+            raise NotImplementedError("ImageNet not yet supported. Images differ in size and require different models")
         else:
             raise ValueError(f"Dataset {dataset_name} not supported.")
         self.num_classes =len(self.dataset.classes)

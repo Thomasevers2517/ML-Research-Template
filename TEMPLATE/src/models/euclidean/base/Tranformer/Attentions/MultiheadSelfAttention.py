@@ -21,9 +21,11 @@ class MultiheadSelfAttention(nn.Module):
         # regularization
         self.attn_dropout = nn.Dropout(attn_pdrop)
         self.resid_dropout = nn.Dropout(resid_pdrop)
-        # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size))
-                                     .view(1, 1, block_size, block_size))
+        
+        # # causal mask to ensure that attention is only applied to the left in the input sequence
+        # self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size))
+        #                              .view(1, 1, block_size, block_size))
+        
         # just so that the attention map is logged
         self.att_map = AttentionMap()
         

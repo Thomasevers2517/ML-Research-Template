@@ -4,27 +4,27 @@ from src.models.euclidean.base.BaseModule import BaseModule
 from src.models.euclidean.base.Tranformer.Transformer import Block
 class VIT(BaseModule):
     def __init__(self, input_shape: tuple, output_shape: tuple, num_layers: int, embedding_size: int, 
-                 num_heads: int, patch_size: int, dropout: float = 0.4, T_Threshold=0):
+                 num_heads: int, patch_size: int, dropout: float = 0.4, T_Threshold=0, num_cls=1):
         super(VIT, self).__init__(input_shape=input_shape, output_shape=output_shape)
         
         self.patch_size = patch_size
         self.num_patches = (input_shape[1] // patch_size) * (input_shape[2] // patch_size)
         self.embed_dim = embedding_size
         self.flatten_dim = patch_size * patch_size * input_shape[0]
-
+        self.num_cls = num_cls
         # Linear projection of flattened patches
         self.embedding = nn.Linear(self.flatten_dim, self.embed_dim)
 
         # Class token and positional embedding
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
-        self.positional_embeddings = nn.Parameter(torch.zeros(1, self.num_patches + 1, self.embed_dim))
+        self.cls_token = nn.Parameter(torch.zeros(1, self.num_cls, self.embed_dim))
+        self.positional_embeddings = nn.Parameter(torch.zeros(1, self.num_patches + self.num_cls, self.embed_dim))
 
         # Transformer encoder
-        self.transformer = nn.Sequential(*[Block(self.num_patches+1, self.embed_dim, num_heads, 
+        self.transformer = nn.Sequential(*[Block(self.num_patches+self.num_cls, self.embed_dim, num_heads, 
                                                  dropout, dropout, T_Threshold=T_Threshold) for _ in range(num_layers)])
 
         # MLP head for classification
-        self.mlp_cls = nn.Linear(self.embed_dim, self.output_size)
+        self.mlp_cls = nn.Linear(self.embed_dim*num_cls, self.output_size)
 
     def forward(self, x):
         B, C, H, W = x.shape
@@ -49,6 +49,6 @@ class VIT(BaseModule):
         x = self.transformer(x)
 
         # Classification head
-        x = self.mlp_cls(x[:, 0])        
+        x = self.mlp_cls( x[:, :self.num_cls].reshape(B, -1))        
 
         return x

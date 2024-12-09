@@ -6,7 +6,7 @@ import torch
 import wandb
 import yaml
 from src.utils.EarlyStopping.BaseEarlyStopping import BaseEarlyStopping
-
+from ptflops import get_model_complexity_info
 
 if __name__ == '__main__':
     with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
@@ -55,7 +55,15 @@ if __name__ == '__main__':
                     embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                     num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
                     patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
-                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD']).to(device)
+                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                    num_cls = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
+                    ).to(device)
+    macs, params = get_model_complexity_info(
+        model, tuple(input_shape), verbose=False, as_strings=False
+    )
+    print(f"FLOPs: {macs}")
+    print(f"Parameters: {params}")
+    wandb.log({"FLOPs": macs, "Parameters": params})
     
     if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
         model = torch.nn.DataParallel(model)
@@ -65,6 +73,7 @@ if __name__ == '__main__':
         model = torch.compile(model)
         print("Model compiled")
     # wandb.watch(model)
+
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR'])
     if TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR_SCHEDULER'] == 'StepLR':
@@ -74,7 +83,8 @@ if __name__ == '__main__':
     elif TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR_SCHEDULER'] == 'CosineAnnealingLR':
         print("Using CosineAnnealingLR")
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
-                
+    elif TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR_SCHEDULER'] == 'None':     
+        scheduler = None
     if TRAIN_CONFIG['LOSS_FN'] == 'CrossEntropyLoss':
         loss_fn = torch.nn.CrossEntropyLoss()
     else:
@@ -92,5 +102,8 @@ if __name__ == '__main__':
     
     inputs, targets = next(iter(test_loader))
     predictions = model(inputs.to(device)).argmax(dim=1)
+    targets = targets.to(device)
+    accuracy = (predictions == targets).float().mean()
     
+    wandb.log({"test_accuracy": accuracy})
     wandb.log({"test_image": [wandb.Image(inputs[i], caption=f"Prediction: {predictions[i]}, Target: {targets[i]}") for i in range(8)]})
