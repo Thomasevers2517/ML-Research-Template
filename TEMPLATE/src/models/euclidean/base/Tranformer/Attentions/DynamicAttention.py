@@ -10,7 +10,7 @@ class MultiheadDynamicSelfAttention(nn.Module):
     explicit implementation here to show that there is nothing too scary here.
     """
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold, mask=None):
         
         super().__init__()
         assert n_embd % n_head == 0
@@ -22,14 +22,14 @@ class MultiheadDynamicSelfAttention(nn.Module):
         self.attn_dropout = nn.Dropout(attn_pdrop)
         self.resid_dropout = nn.Dropout(resid_pdrop)
         # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size))
-                                     .view(1, 1, block_size, block_size))
+        
         # just so that the attention map is logged
         self.att_map = AttentionMap()
         
         self.n_head = n_head
         self.n_embd = n_embd
         self.T_Threshold = T_Threshold
+        self.mask = mask
 
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
@@ -42,7 +42,8 @@ class MultiheadDynamicSelfAttention(nn.Module):
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        # att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+        if self.mask is not None:
+            att = att.masked_fill(self.mask == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
         att = F.relu(att - self.T_Threshold)
         att = self.att_map(att)

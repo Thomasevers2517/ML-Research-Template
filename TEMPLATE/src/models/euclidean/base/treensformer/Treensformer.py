@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from src.models.euclidean.base.Tranformer.Attentions.MultiheadSelfAttention import MultiheadSelfAttention
 from src.models.euclidean.base.Tranformer.Attentions.DynamicAttention import MultiheadDynamicSelfAttention
 # -----------------------------------------------------------------------------
 
@@ -18,16 +17,16 @@ class NewGELU(nn.Module):
         return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 
-class Block(nn.Module):
-    """ an unassuming Transformer block """
+class TreensformerBlock(nn.Module):
+    
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, mask=None):
         """ Constructor for the Block class """
         
         super().__init__()
         self.ln_1 = nn.LayerNorm(n_embd)
-        self.attn = MultiheadSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
-                                           attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold)
+        self.attn = MultiheadDynamicSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
+                                           attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold, mask=mask)
         self.ln_2 = nn.LayerNorm(n_embd)
 
         self.mlpf = nn.Sequential(

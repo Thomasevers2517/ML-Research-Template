@@ -63,6 +63,9 @@ parameters:
         values: ["data"]
       BATCH_SIZE:
         values: [128]
+      NUM_WORKERS: 
+        values: [32]
+
 
 
 

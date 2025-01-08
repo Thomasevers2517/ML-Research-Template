@@ -2,11 +2,13 @@ import src.data.Image_Dataloader as Image_Dataloader
 from src.training.base.BaseTrainer import BaseTrainer
 import src.models.euclidean.image.ImageMLP as ImageMLP
 import src.models.euclidean.image.VIT as VIT
+import src.models.euclidean.image.ImageTreensformer as ImageTreensformer
 import torch
 import wandb
 import yaml
 from src.utils.EarlyStopping.BaseEarlyStopping import BaseEarlyStopping
 from ptflops import get_model_complexity_info
+
 
 if __name__ == '__main__':
     with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
@@ -38,7 +40,8 @@ if __name__ == '__main__':
     if TRAIN_CONFIG['DATA_LOADER'] == 'Image_Dataloader':
         train_loader, val_loader, test_loader = Image_Dataloader.get_dataloaders(dataset_name=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["DATASET_NAME"], 
                                                                                 data_dir=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["DATA_DIR"], 
-                                                                                batch_size=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["BATCH_SIZE"])
+                                                                                batch_size=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["BATCH_SIZE"],
+                                                                                num_workers=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["NUM_WORKERS"],)
     
     inputs, targets = next(iter(train_loader))
 
@@ -50,14 +53,23 @@ if __name__ == '__main__':
     # model = ImageMLP.ImageMLP(input_shape=input_shape, output_shape=targets_shape, 
     # num_layers=1, hidden_size=50).to(device)
     
-    model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
-                    num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
-                    embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
-                    num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
-                    patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
-                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
-                    num_cls = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
-                    ).to(device)
+    # model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
+    #                 num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+    #                 embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+    #                 num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+    #                 patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+    #                 T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+    #                 num_cls = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
+    #                 ).to(device)
+    model = ImageTreensformer.ImageTreensformer(input_shape=input_shape, output_shape=targets_shape,
+                                                num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                                                embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                                                num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                                                patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                                                T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                                                num_cls=TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS']).to(device)
+    
+    
     macs, params = get_model_complexity_info(
         model, tuple(input_shape), verbose=False, as_strings=False
     )

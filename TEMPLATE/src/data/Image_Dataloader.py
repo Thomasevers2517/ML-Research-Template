@@ -42,7 +42,7 @@ class Image_Data(Dataset):
     def __getitem__(self, idx):
         return self.dataset[idx]
 
-def get_dataloaders(dataset_name:str, data_dir: str, batch_size: int, val_split: float = 0.1):
+def get_dataloaders(dataset_name:str, data_dir: str, batch_size: int, val_split: float = 0.1, num_workers: int = 1):
 
     transform = transforms.Compose([transforms.ToTensor()])
 
@@ -53,8 +53,8 @@ def get_dataloaders(dataset_name:str, data_dir: str, batch_size: int, val_split:
     val_size = len(train_dataset) - train_size
     train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=32, persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=32, persistent_workers=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,pin_memory=True, num_workers=4, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers, persistent_workers=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=num_workers, persistent_workers=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,pin_memory=True, num_workers=num_workers, persistent_workers=True)
 
     return train_loader, val_loader, test_loader
