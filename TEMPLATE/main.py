@@ -16,7 +16,7 @@ if __name__ == '__main__':
         
     wandb.init(project=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["PROJECT"], 
                dir=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["DIR"], config=DF_TRAIN_CONFIG,
-               name=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["NAME"],)
+               notes=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["NOTES"],)
     TRAIN_CONFIG = wandb.config
     
     print("CONFIGURATION \n", TRAIN_CONFIG)
