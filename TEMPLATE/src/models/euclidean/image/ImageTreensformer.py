@@ -228,8 +228,14 @@ class ImageTreensformer(BaseModule):
             for j in leaves:
                 mask[i, j] = True
                 mask[j, i] = True
+                
+        # 4) Allow parent to communicate to all children
+        for parent, children in self.children_map.items():
+            for child in children:
+                mask[parent, child] = True
+                mask[child, parent] = True
 
-        # 4) Optionally allow self-attention
+        # 5) Optionally allow self-attention
         mask.fill_diagonal_(True)
 
         return mask

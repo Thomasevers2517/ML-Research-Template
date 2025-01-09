@@ -15,7 +15,8 @@ if __name__ == '__main__':
         DF_TRAIN_CONFIG = yaml.safe_load(f)["TRAIN_CONFIG"]
         
     wandb.init(project=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["PROJECT"], 
-               dir=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["DIR"], config=DF_TRAIN_CONFIG)
+               dir=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["DIR"], config=DF_TRAIN_CONFIG,
+               name=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["NAME"],)
     TRAIN_CONFIG = wandb.config
     
     print("CONFIGURATION \n", TRAIN_CONFIG)
