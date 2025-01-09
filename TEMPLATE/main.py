@@ -69,7 +69,9 @@ if __name__ == '__main__':
                                                 T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
                                                 num_cls=TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS']).to(device)
     
-    
+    print("Model device:", next(model.parameters()).device)
+    print("tree_mask device:", model.tree_mask.device)
+
     macs, params = get_model_complexity_info(
         model, tuple(input_shape), verbose=False, as_strings=False
     )

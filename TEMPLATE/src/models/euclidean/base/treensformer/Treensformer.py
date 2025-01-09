@@ -20,13 +20,13 @@ class NewGELU(nn.Module):
 class TreensformerBlock(nn.Module):
     
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, mask=None):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, tree_mask=None):
         """ Constructor for the Block class """
         
         super().__init__()
         self.ln_1 = nn.LayerNorm(n_embd)
         self.attn = MultiheadDynamicSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
-                                           attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold, mask=mask)
+                                           attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold, tree_mask=tree_mask)
         self.ln_2 = nn.LayerNorm(n_embd)
 
         self.mlpf = nn.Sequential(

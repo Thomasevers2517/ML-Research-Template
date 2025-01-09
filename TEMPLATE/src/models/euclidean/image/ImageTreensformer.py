@@ -32,11 +32,14 @@ class ImageTreensformer(BaseModule):
         # -------------------------------------------------
         self.patch_size = patch_size
         self.num_patches = (input_shape[1] // patch_size) * (input_shape[2] // patch_size)
-        self.num_children = 4
+        self.num_children = 4 #will only work for quad-tree for now
         # For a perfect quad-tree: log(...) etc. 
         self.num_levels = math.log(math.sqrt(self.num_patches), math.sqrt(self.num_children)) + 1
         assert self.num_levels.is_integer(), "Image size must be compatible with number of children"
         self.num_levels = int(self.num_levels)
+        
+        self.n_nodes = sum(self.num_children**i for i in range(self.num_levels))
+
         
         self.embed_dim = embedding_size
         self.flatten_dim = patch_size * patch_size * input_shape[0]
@@ -64,31 +67,35 @@ class ImageTreensformer(BaseModule):
 
         # 3) Create the mask (n_nodes, n_nodes) or (1, n_nodes, n_nodes)
         #    as you see fit. Then store as a buffer so it moves with .to(device)
-        self.register_buffer("tree_mask", self._create_mask(x_tree))
-        
+        tree_mask = self._create_mask(x_tree)
+        tree_mask = torch.cat([torch.ones(1, tree_mask.size(1), 
+                                          dtype=tree_mask.dtype, device=tree_mask.device), tree_mask], dim=0)
+        tree_mask = torch.cat([torch.ones(tree_mask.size(0), 1, 
+                                          dtype=tree_mask.dtype, device=tree_mask.device), tree_mask], dim=1)
+        self.register_buffer("tree_mask", tree_mask)
         
         # -------------------------------------------------
         # Layers
         # -------------------------------------------------
         self.embedding = nn.Linear(self.flatten_dim, self.embed_dim)
-        self.cls_token = nn.Parameter(torch.zeros(1, self.num_cls, self.embed_dim))
-        self.positional_embeddings = nn.Parameter(torch.zeros(1, self.num_patches + self.num_cls, self.embed_dim))
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
+        self.positional_embeddings = nn.Parameter(torch.zeros(1, self.n_nodes, self.embed_dim))
 
         self.transformer = nn.Sequential(
             *[
                 TreensformerBlock(
-                    self.num_patches + self.num_cls,
+                    self.n_nodes,
                     self.embed_dim,
                     num_heads,
                     dropout,
                     dropout,
                     T_Threshold=T_Threshold,
-                    mask=self.tree_mask,
+                    tree_mask=self.tree_mask,
                 )
                 for _ in range(num_layers)
             ]
         )
-        self.mlp_cls = nn.Linear(self.embed_dim * num_cls, self.output_size)
+        self.mlp_cls = nn.Linear(self.embed_dim, self.output_size)
 
     def forward(self, x):
         """
@@ -108,7 +115,18 @@ class ImageTreensformer(BaseModule):
 
         x = self.build_token_tree(x)  # (1, n_nodes, flatten_dim)
         # self.visualize_tree_mask()
-        raise NotImplementedError("Finish the forward pass")
+        #---------------------------------------------------
+        # Forward pass
+        x = self.embedding(x)  # (1, n_nodes, embed_dim)
+        x = x + self.positional_embeddings
+        
+        B = x.shape[0]
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # shape: (B, num_cls, embed_dim)
+        x = torch.cat((cls_tokens, x), dim=1)
+        
+        x = self.transformer(x) # (B, n_nodes, embed_dim)
+        x = self.mlp_cls(x[:, 0])  # (B, num_cls)   
+        return x
     # ----------------------------------------------------------------
         
 
@@ -125,9 +143,8 @@ class ImageTreensformer(BaseModule):
         self.children_map.clear()
         self.sibling_map.clear()
 
-        n_nodes = sum(4**i for i in range(self.num_levels))
-        B, h, w, dim = x.shape  # B=1 typically
-        x_tree = torch.zeros(B, n_nodes, dim, dtype=x.dtype, device=x.device)
+        B, h, w, dim = x.shape  
+        x_tree = torch.zeros(B, self.n_nodes, dim, dtype=x.dtype, device=x.device)
 
         # Start DFS
         self._add_parent(x_tree, idx=0, parent_idx=None, x=x)
