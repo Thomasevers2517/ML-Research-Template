@@ -9,22 +9,22 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["VIT"]
+    values: ["ImageTreensformer", "VIT"]
       
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [4,8]
+        values: [8, 16]
       EMBEDDING_SIZE:
-        values: [256]
+        values: [256, 128]
       NUM_HEADS:
         values: [4,8]
       PATCH_SIZE: 
-        values: [1, 2]
+        values: [2]
       T_THRESHOLD:
         values: [0]
       NUM_CLS:
-        values: [1, 2, 4]
+        values: [1]
 
   OPTIMIZER: 
       values: ["AdamW"]
@@ -34,7 +34,7 @@ parameters:
       LR:
         values: [0.0001]
       NUM_EPOCHS:
-        values: [40]
+        values: [80]
       LR_SCHEDULER:
         values: ["CosineAnnealingLR"]
 
@@ -62,9 +62,11 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [128]
+        values: [64]
       NUM_WORKERS: 
-        values: [32]
+        values: [64]
+      AUGMENTATION: 
+        values: [True]
 
 
 

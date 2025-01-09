@@ -35,13 +35,35 @@ if __name__ == '__main__':
         
     print(f"Using devices: {device} and DATA_PARALLEL: {TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']}")
     
-    # Initialize wandb
+    if TRAIN_CONFIG['DATA_LOADER_PARAMS']['AUGMENTATION']:
+        import torchvision.transforms as transforms
+        if TRAIN_CONFIG['DATA_LOADER_PARAMS']['DATASET_NAME'] == 'CIFAR10':
+            MEAN = (0.4914, 0.4822, 0.4465)
+            STD = (0.2023, 0.1994, 0.2010)
+            SIZE = 32
+        elif TRAIN_CONFIG['DATA_LOADER_PARAMS']['DATASET_NAME'] == 'CIFAR100':
+            MEAN = (0.5071, 0.4867, 0.4408)
+            STD = (0.2675, 0.2565, 0.2761)
+            SIZE = 32
+        else:
+            raise NotImplementedError(f"Dataset {TRAIN_CONFIG['DATA_LOADER_PARAMS']['DATASET_NAME']} not implemented")
 
+        # Define training transformations
+        train_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),                # Randomly flip images horizontally
+            transforms.RandomResizedCrop(SIZE, scale=(0.6, 1.0)),  # Randomly resize and crop images
+            transforms.RandomRotation(15),                   # Random rotation within ±15 degrees
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Color jitter
+            transforms.ToTensor(),                            # Convert images to PyTorch tensors
+            transforms.Normalize(MEAN, STD) # Normalize using dataset mean and std
+    ])
+        
     if TRAIN_CONFIG['DATA_LOADER'] == 'Image_Dataloader':
         train_loader, val_loader, test_loader = Image_Dataloader.get_dataloaders(dataset_name=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["DATASET_NAME"], 
                                                                                 data_dir=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["DATA_DIR"], 
                                                                                 batch_size=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["BATCH_SIZE"],
-                                                                                num_workers=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["NUM_WORKERS"],)
+                                                                                num_workers=TRAIN_CONFIG["DATA_LOADER_PARAMS"]["NUM_WORKERS"],
+                                                                                train_transform=train_transform)
     
     inputs, targets = next(iter(train_loader))
 
@@ -52,25 +74,25 @@ if __name__ == '__main__':
     
     # model = ImageMLP.ImageMLP(input_shape=input_shape, output_shape=targets_shape, 
     # num_layers=1, hidden_size=50).to(device)
+    if TRAIN_CONFIG['MODEL'] == 'VIT':
+        model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
+                        num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                        embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                        num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                        T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                        num_cls_tkn = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
+                        ).to(device)
+    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformer':
+        model = ImageTreensformer.ImageTreensformer(input_shape=input_shape, output_shape=targets_shape,
+                                                    num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                                                    embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                                                    num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                                                    patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                                                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                                                    num_cls_tkn=TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS']).to(device)
     
-    # model = VIT.VIT(input_shape=input_shape, output_shape=targets_shape, 
-    #                 num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
-    #                 embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
-    #                 num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
-    #                 patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
-    #                 T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
-    #                 num_cls = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
-    #                 ).to(device)
-    model = ImageTreensformer.ImageTreensformer(input_shape=input_shape, output_shape=targets_shape,
-                                                num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
-                                                embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
-                                                num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
-                                                patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
-                                                T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
-                                                num_cls=TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS']).to(device)
-    
-    print("Model device:", next(model.parameters()).device)
-    print("tree_mask device:", model.tree_mask.device)
+
 
     macs, params = get_model_complexity_info(
         model, tuple(input_shape), verbose=False, as_strings=False

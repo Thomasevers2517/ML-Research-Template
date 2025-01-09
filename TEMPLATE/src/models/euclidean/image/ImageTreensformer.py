@@ -23,7 +23,7 @@ class ImageTreensformer(BaseModule):
         patch_size: int,
         dropout: float = 0.4,
         T_Threshold=0,
-        num_cls=1
+        num_cls_tkn=1
     ):
         super(ImageTreensformer, self).__init__(input_shape=input_shape, output_shape=output_shape)
         
@@ -43,7 +43,7 @@ class ImageTreensformer(BaseModule):
         
         self.embed_dim = embedding_size
         self.flatten_dim = patch_size * patch_size * input_shape[0]
-        self.num_cls = num_cls
+        self.num_cls_tkn = num_cls_tkn
         
         assert input_shape[1] == input_shape[2], "Input image must be square (H==W)."
 
@@ -68,9 +68,9 @@ class ImageTreensformer(BaseModule):
         # 3) Create the mask (n_nodes, n_nodes) or (1, n_nodes, n_nodes)
         #    as you see fit. Then store as a buffer so it moves with .to(device)
         tree_mask = self._create_mask(x_tree)
-        tree_mask = torch.cat([torch.ones(1, tree_mask.size(1), 
+        tree_mask = torch.cat([torch.ones(self.num_cls_tkn, tree_mask.size(1), 
                                           dtype=tree_mask.dtype, device=tree_mask.device), tree_mask], dim=0)
-        tree_mask = torch.cat([torch.ones(tree_mask.size(0), 1, 
+        tree_mask = torch.cat([torch.ones(tree_mask.size(0), self.num_cls_tkn, 
                                           dtype=tree_mask.dtype, device=tree_mask.device), tree_mask], dim=1)
         self.register_buffer("tree_mask", tree_mask)
         
@@ -78,7 +78,7 @@ class ImageTreensformer(BaseModule):
         # Layers
         # -------------------------------------------------
         self.embedding = nn.Linear(self.flatten_dim, self.embed_dim)
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
+        self.cls_token = nn.Parameter(torch.zeros(1, self.num_cls_tkn, self.embed_dim))
         self.positional_embeddings = nn.Parameter(torch.zeros(1, self.n_nodes, self.embed_dim))
 
         self.transformer = nn.Sequential(
@@ -95,7 +95,7 @@ class ImageTreensformer(BaseModule):
                 for _ in range(num_layers)
             ]
         )
-        self.mlp_cls = nn.Linear(self.embed_dim, self.output_size)
+        self.mlp_cls = nn.Linear(self.embed_dim*self.num_cls_tkn, self.output_size)
 
     def forward(self, x):
         """
@@ -125,7 +125,9 @@ class ImageTreensformer(BaseModule):
         x = torch.cat((cls_tokens, x), dim=1)
         
         x = self.transformer(x) # (B, n_nodes, embed_dim)
-        x = self.mlp_cls(x[:, 0])  # (B, num_cls)   
+        x = x[:, :self.num_cls_tkn]
+        x = x.view(B, -1)
+        x = self.mlp_cls(x)
         return x
     # ----------------------------------------------------------------
         

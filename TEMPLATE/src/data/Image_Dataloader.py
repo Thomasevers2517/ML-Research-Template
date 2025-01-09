@@ -42,12 +42,11 @@ class Image_Data(Dataset):
     def __getitem__(self, idx):
         return self.dataset[idx]
 
-def get_dataloaders(dataset_name:str, data_dir: str, batch_size: int, val_split: float = 0.1, num_workers: int = 1):
+def get_dataloaders(dataset_name:str, data_dir: str, batch_size: int, val_split: float = 0.1, num_workers: int = 1, train_transform: Callable = transforms.ToTensor()):
 
-    transform = transforms.Compose([transforms.ToTensor()])
 
-    train_dataset = Image_Data(dataset_name= dataset_name, data_dir = data_dir, train=True, transform=transform)
-    test_dataset = Image_Data(dataset_name= dataset_name, data_dir = data_dir, train=False, transform=transform)
+    train_dataset = Image_Data(dataset_name= dataset_name, data_dir = data_dir, train=True, transform=train_transform)
+    test_dataset = Image_Data(dataset_name= dataset_name, data_dir = data_dir, train=False, transform=train_transform)
 
     train_size = int((1 - val_split) * len(train_dataset))
     val_size = len(train_dataset) - train_size

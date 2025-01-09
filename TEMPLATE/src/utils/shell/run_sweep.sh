@@ -6,6 +6,11 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+# Generate a random folder name for outputs
+output_folder="TEMPLATE/logging/local_output/$(date +%s%N)"
+echo "Creating output folder: $output_folder"
+mkdir -p "$output_folder"
+
 # Run the sweep command and capture both stdout and stderr
 echo "Running sweep command: wandb sweep TEMPLATE/configs/training/sweep_config.yaml"
 sweep_output=$(wandb sweep TEMPLATE/configs/training/sweep_config.yaml 2>&1)
@@ -16,9 +21,6 @@ echo "$sweep_output"
 
 # Extract the Sweep ID using grep and awk
 sweep_id=$(echo "$sweep_output" | grep -Eo "wandb: Creating sweep with ID: [a-z0-9]+" | awk '{print $NF}')
-
-# Alternative extraction method using grep with Perl regex
-# sweep_id=$(echo "$sweep_output" | grep -oP "Created sweep with ID: \K\w+")
 
 # Check if the sweep ID was extracted successfully
 if [ -z "$sweep_id" ]; then
@@ -36,8 +38,9 @@ echo "Run sweep agent with: wandb agent thomasevers9/ML-Research-Template-TEMPLA
 # Start the sweep agent using the provided GPU IDs
 echo "Starting sweep agent on GPUs: $@"
 for i in $@; do
-    echo "running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > TEMPLATE/logging/local_output/v1/gpu$i.txt &"
+    log_file="$output_folder/gpu$i.txt"
+    echo "Running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > $log_file &"
 
-    CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > TEMPLATE/logging/local_output/v1/gpu$i &
+    CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > "$log_file" &
 
 done
