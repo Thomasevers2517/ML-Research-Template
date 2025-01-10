@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 
 from src.models.euclidean.base.BaseModule import BaseModule
-from src.models.euclidean.base.Treensformer.Treensformer import TreensformerBlock
+from src.models.euclidean.base.Treensformer.Treensformer import TreensformerBlock, TreensformerBlock_BranchMLP
 
 # Add these imports for visualization
 import networkx as nx
@@ -81,9 +81,23 @@ class ImageTreensformer(BaseModule):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
         self.positional_embeddings = nn.Parameter(torch.zeros(1, self.n_nodes, self.embed_dim))
 
+        # self.transformer = nn.Sequential(
+        #     *[
+        #         TreensformerBlock(
+        #             self.n_nodes,
+        #             self.embed_dim,
+        #             num_heads,
+        #             dropout,
+        #             dropout,
+        #             T_Threshold=T_Threshold,
+        #             tree_mask=self.tree_mask,
+        #         )
+        #         for _ in range(num_layers)
+        #     ]
+        # )
         self.transformer = nn.Sequential(
             *[
-                TreensformerBlock(
+                TreensformerBlock_BranchMLP(
                     self.n_nodes,
                     self.embed_dim,
                     num_heads,
@@ -91,6 +105,8 @@ class ImageTreensformer(BaseModule):
                     dropout,
                     T_Threshold=T_Threshold,
                     tree_mask=self.tree_mask,
+                    tree_structure=(self.parent_map, self.children_map, self.sibling_map, self.num_levels)
+                    
                 )
                 for _ in range(num_layers)
             ]
