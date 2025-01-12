@@ -111,7 +111,7 @@ class FullBranchMLP(nn.Module):
         W1_expanded = self.W1.unsqueeze(0).expand(batch_size, -1, -1, -1, -1) # [B, 4*dim, num_nodes, num_nodes, dim]
         x = torch.einsum('bni,bjmni -> bmj', x, W1_expanded)
         x = F.relu(x)
-        x = self.linear2(x)
+        x = self.linear2(x) # same second linear layer for all nodes
         return x
     
     def buildW1(self, device):

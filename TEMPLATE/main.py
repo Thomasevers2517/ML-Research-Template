@@ -8,6 +8,7 @@ import wandb
 import yaml
 from src.utils.EarlyStopping.BaseEarlyStopping import BaseEarlyStopping
 from ptflops import get_model_complexity_info
+import torch._dynamo
 
 
 if __name__ == '__main__':
@@ -22,14 +23,15 @@ if __name__ == '__main__':
     print("CONFIGURATION \n", TRAIN_CONFIG)
     
     torch.manual_seed(0)
-    
+    # torch._dynamo.config.verbose = True  # Logs tracing and graph compilation steps
+
     if torch.cuda.is_available():
         # torch.backends.cudnn.deterministic = True
         # torch.backends.cudnn.benchmark = False
         torch.set_float32_matmul_precision('high')
         if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
             device = torch.device(f"cuda:0")
-        elif len(TRAIN_CONFIG['TRAINER_PARAMS']['DEVICES']) == 1:
+        else:
             device = torch.device(f"cuda:0")
     else:
         device = torch.device('cpu')
