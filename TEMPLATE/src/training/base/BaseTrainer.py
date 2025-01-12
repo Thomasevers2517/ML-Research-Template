@@ -12,7 +12,7 @@ from src.utils.logging.WandbLogger import WandbLogger
 class BaseTrainer:
     def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, 
                  loss_fn: Callable, device: torch.device, data_parallel: bool,
-                 val_interval: int = 1, log_interval: int = 1, EarlyStopper = None, scheduler = None):
+                 val_interval: int = 1, log_interval: int = 1, EarlyStopper = None, scheduler = None, store_best_model = False):
         """
         Initializes the BaseTrainer with the given model, data loaders, optimizer, loss function, and device.
 
@@ -50,6 +50,9 @@ class BaseTrainer:
         
         self.EarlyStopper = EarlyStopper
         self.scheduler = scheduler
+        
+        self.best_model_path = f"best_model_{np.random.randint(100000)}.pth"
+        self.store_best_model = store_best_model
 
     def train(self, epochs: int) -> None:
         """
@@ -66,7 +69,7 @@ class BaseTrainer:
             if epoch % self.val_interval == 0:
                 val_loss = self.validate()
                 if self.EarlyStopper.check_improvement(val_loss):
-                    torch.save(self.model.state_dict(), 'best_model.pth')
+                    torch.save(self.model.state_dict(), self.best_model_path)
 
                     break
 
@@ -80,12 +83,19 @@ class BaseTrainer:
             
         epoch_pbar.close()
         self.on_training_end()
+        return self.best_model
     def on_training_end(self) -> None:
         """
         Callback function that is called at the end of the training process.
         """
+        test_loss = self.test(self.test_loader)
+        test_accuracy = self.get_test_accuracy(self.test_loader, 'best_model.pth')
+        if not self.store_best_model:
+            import os
+            os.remove(self.best_model_path)
         pass
-        
+
+    
     def train_epoch(self, epoch:int) -> float:
         self.on_epoch_start()
         
@@ -262,4 +272,35 @@ class BaseTrainer:
         Returns:
             float: The average loss on the test dataset.
         """
-        return self.calculate_data_loss(test_loader)
+        test_loss = self.calculate_data_loss(test_loader)
+        wandb.log({"test_loss": test_loss})
+        return test_loss
+
+    def get_test_accuracy(self, test_loader: DataLoader, model_weights_path: str) -> float:
+        """
+        Returns the accuracy of the model on the test dataset.
+
+        Args:
+            test_loader (DataLoader): The data loader for the test dataset.
+            model_weights_path (str): The path to the model weights file.
+
+        Returns:
+            float: The accuracy of the model on the test dataset.
+        """
+        self.model.load_state_dict(torch.load(model_weights_path))
+        self.model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for inputs, targets in test_loader:
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                outputs = self.model(inputs)
+                predictions = outputs.argmax(dim=1)
+                correct += (predictions == targets).sum().item()
+                total += targets.size(0)
+        test_accuracy = correct / total
+        
+        wandb.log({"test_accuracy": test_accuracy})
+        wandb.log({"test_image": [wandb.Image(inputs[i], caption=f"Prediction: {predictions[i]}, Target: {targets[i]}") for i in range(8)]})
+        
+        return test_accuracy

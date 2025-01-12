@@ -134,13 +134,4 @@ if __name__ == '__main__':
     trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL'], 
                           log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper, scheduler=scheduler)
     
-    trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
-    wandb.log({"test_loss": trainer.test(test_loader=test_loader)})
-    
-    inputs, targets = next(iter(test_loader))
-    predictions = model(inputs.to(device)).argmax(dim=1)
-    targets = targets.to(device)
-    accuracy = (predictions == targets).float().mean()
-    
-    wandb.log({"test_accuracy": accuracy})
-    wandb.log({"test_image": [wandb.Image(inputs[i], caption=f"Prediction: {predictions[i]}, Target: {targets[i]}") for i in range(8)]})
+    test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
