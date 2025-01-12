@@ -90,8 +90,7 @@ if __name__ == '__main__':
                                                     embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                                                     num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
                                                     patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
-                                                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
-                                                    num_cls_tkn=TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS']).to(device)
+                                                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD']).to(device)
     
 
     macs, params = get_model_complexity_info(
