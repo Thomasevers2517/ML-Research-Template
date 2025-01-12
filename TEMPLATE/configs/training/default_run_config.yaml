@@ -23,7 +23,7 @@ TRAIN_CONFIG:
     DATA_LOADER_PARAMS:
         DATASET_NAME: "CIFAR10" # Options: ["ImageNet", "CIFAR10", "CIFAR100", "MNIST", "FashionMNIST"]
         DATA_DIR: "data"
-        BATCH_SIZE: 1
+        BATCH_SIZE: 2
         NUM_WORKERS: 1
     WANDB_LOGGING_PARAMS:
         PROJECT: "Treensformer"

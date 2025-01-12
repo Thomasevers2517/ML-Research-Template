@@ -94,7 +94,6 @@ if __name__ == '__main__':
                                                     num_cls_tkn=TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS']).to(device)
     
 
-
     macs, params = get_model_complexity_info(
         model, tuple(input_shape), verbose=False, as_strings=False
     )
