@@ -18,34 +18,12 @@ class NewGELU(nn.Module):
         return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 
+    
 class TreensformerBlock(nn.Module):
     
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, tree_mask=None):
-        """ Constructor for the Block class """
-        
-        super().__init__()
-        self.ln_1 = nn.LayerNorm(n_embd)
-        self.attn = MultiheadDynamicSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
-                                           attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold, tree_mask=tree_mask)
-        self.ln_2 = nn.LayerNorm(n_embd)
-
-        self.mlpf = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd),
-            NewGELU(),
-            nn.Linear(4 * n_embd, n_embd),
-            nn.Dropout(resid_pdrop))
-
-    def forward(self, x):
-        """ Forward pass for the Block class """
-        x = x + self.attn(self.ln_1(x))
-        x = x + self.mlpf(self.ln_2(x))
-        return x
-    
-class TreensformerBlock_BranchMLP(nn.Module):
-    
-
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, tree_mask=None, tree_structure=None):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, tree_mask=None, 
+                 tree_structure=None, mlp_type="full_branch", attn_type="per_node"):
         """ Constructor for the Block class 
         Args:
             tree_structure: A tuple  (parent_map, children_map, sibling_map, n_levels) representing the tree structure
@@ -53,15 +31,32 @@ class TreensformerBlock_BranchMLP(nn.Module):
         assert tree_structure is not None, "tree_structure must be provided "
         
         super().__init__()
-        print("Building TreensformerBlock_BranchMLP")
+        print("Building TreensformerBlock")
         self.parent_map, self.children_map, self.sibling_map, self.n_levels = tree_structure
         
         self.ln_1 = nn.LayerNorm(n_embd)
-        self.attn = MultiheadDynamicSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
+        if attn_type == "per_node":
+            self.attn = MultiheadDynamicSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
                                            attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold, tree_mask=tree_mask)
+        elif attn_type == "full_branch":
+            raise NotImplementedError("Full branch attention not implemented")
+            # self.attn = FullBranchAttention(n_embd, n_head, block_size, parent_map=self.parent_map, children_map=self.children_map, sibling_map=self.sibling_map, n_levels=self.n_levels)
+        else:
+            raise ValueError(f"Unknown attn_type: {attn_type}")
         self.ln_2 = nn.LayerNorm(n_embd)
 
-        self.mlpf = FullBranchMLP(n_embd, n_levels=self.n_levels, parent_map=self.parent_map, children_map=self.children_map, block_size=block_size)
+        if mlp_type == "per_node":
+                    self.mlpf = nn.Sequential(
+                        nn.Linear(n_embd, 4 * n_embd),
+                        NewGELU(),
+                        nn.Linear(4 * n_embd, n_embd),
+                        nn.Dropout(resid_pdrop))
+        elif mlp_type == "full_branch":
+            Warning("No bias in the first linear layer of the MLP")
+            Warning("No dropout in branch MLP")
+            self.mlpf = FullBranchMLP(n_embd, n_levels=self.n_levels, parent_map=self.parent_map, children_map=self.children_map, block_size=block_size)
+        else:
+            raise ValueError(f"Unknown mlp_type: {mlp_type}")
 
     def forward(self, x):
         """ Forward pass for the Block class """

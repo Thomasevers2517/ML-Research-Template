@@ -107,7 +107,7 @@ if __name__ == '__main__':
     model = model.to(device)
     if TRAIN_CONFIG['TEST_RUN']== False:
         print("Compiling model")
-        model = torch.compile(model)
+        model = torch.compile(model, mode=TRAIN_CONFIG['COMPILATION']['MODE'])
         print("Model compiled")
     # wandb.watch(model)
 
