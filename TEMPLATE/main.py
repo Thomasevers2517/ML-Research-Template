@@ -10,11 +10,12 @@ from src.utils.EarlyStopping.BaseEarlyStopping import BaseEarlyStopping
 from ptflops import get_model_complexity_info
 import torch._dynamo
 
-
 if __name__ == '__main__':
-    with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
+    # with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
+    with open("/users/thomasevers/users/thomas/ML_Research_Template/ML-Research-Template/TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
         DF_TRAIN_CONFIG = yaml.safe_load(f)["TRAIN_CONFIG"]
-        
+    Warning("Public wandb key is being used and on git")
+    wandb.login(key="3cfa8ad4071af79aa5f7a00bb091ba6b46ac71e1")
     wandb.init(project=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["PROJECT"], 
                dir=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["DIR"], config=DF_TRAIN_CONFIG,
                notes=DF_TRAIN_CONFIG["WANDB_LOGGING_PARAMS"]["NOTES"],)
@@ -31,6 +32,7 @@ if __name__ == '__main__':
         torch.set_float32_matmul_precision('high')
         if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
             device = torch.device(f"cuda:0")
+            Warning("DATA_PARALLEL is True, but device is not set to multiple GPUs")
         else:
             device = torch.device(f"cuda:0")
     else:
@@ -38,6 +40,7 @@ if __name__ == '__main__':
         
     print(f"Using devices: {device} and DATA_PARALLEL: {TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']}")
     
+
     if TRAIN_CONFIG['DATA_LOADER_PARAMS']['AUGMENTATION']:
         import torchvision.transforms as transforms
         if TRAIN_CONFIG['DATA_LOADER_PARAMS']['DATASET_NAME'] == 'CIFAR10':
@@ -103,7 +106,7 @@ if __name__ == '__main__':
     wandb.log({"FLOPs": macs, "Parameters": params})
     
     if TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL']:
-        model = torch.nn.DataParallel(model)
+        model = torch.nn.DataParallel(model, device_ids=device)
     model = model.to(device)
     if TRAIN_CONFIG['TEST_RUN']== False:
         print("Compiling model")
@@ -134,4 +137,8 @@ if __name__ == '__main__':
     trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL'], 
                           log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper, scheduler=scheduler)
     
-    test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+    if TRAIN_CONFIG['EMIT_NVTX']:
+        with torch.autograd.profiler.emit_nvtx():
+            test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+    else:
+        test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])

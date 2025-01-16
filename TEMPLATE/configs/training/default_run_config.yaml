@@ -1,11 +1,11 @@
 TRAIN_CONFIG:
-    TEST_RUN: True
+    TEST_RUN: False
     MODEL: "ImageTreensformer"
     MODEL_PARAMS:
-        NUM_LAYERS: 4
+        NUM_LAYERS: 1
         EMBEDDING_SIZE: 32
         NUM_HEADS: 4
-        PATCH_SIZE: 4
+        PATCH_SIZE: 8
         T_THRESHOLD: 0
         NUM_CLS: 1
     OPTIMIZER: "AdamW"
@@ -18,7 +18,7 @@ TRAIN_CONFIG:
     TRAINER_PARAMS:
         LOG_INTERVAL: 4
         VAL_INTERVAL: 1
-        DATA_PARALLEL: [False]
+        DATA_PARALLEL: False
     DATA_LOADER: "Image_Dataloader"
     DATA_LOADER_PARAMS:
         DATASET_NAME: "CIFAR100" # Options: ["ImageNet", "CIFAR10", "CIFAR100", "MNIST", "FashionMNIST"]
@@ -33,6 +33,8 @@ TRAIN_CONFIG:
     EARLY_STOPPING_PARAMS:
         PATIENCE: 10000
         DELTA: 0.001
-        VERBOSE: False
+        VERBOSE: Falsesudo lsof /dev/nvidia*
+
     COMPILATION:
-        MODE: "reduce-overhead"
+        MODE: default #"reduce-overhead"
+    EMIT_NVTX: TRUE

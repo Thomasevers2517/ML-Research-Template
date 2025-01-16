@@ -16,11 +16,11 @@ parameters:
       NUM_LAYERS:
         values: [4]
       EMBEDDING_SIZE:
-        values: [16]
+        values: [32,16]
       NUM_HEADS:
         values: [4]
       PATCH_SIZE: 
-        values: [8]
+        values: [2]
       T_THRESHOLD:
         values: [0]
       NUM_CLS:
@@ -62,9 +62,9 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [2]
+        values: [1]
       NUM_WORKERS: 
-        values: [32]
+        values: [16]
       AUGMENTATION: 
         values: [True]
 
