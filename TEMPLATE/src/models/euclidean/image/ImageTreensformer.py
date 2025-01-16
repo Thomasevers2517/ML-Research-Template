@@ -10,9 +10,7 @@ from src.models.euclidean.base.Treensformer.Treensformer import TreensformerBloc
 import networkx as nx
 import matplotlib.pyplot as plt
 
-
-
-class ImageTreensformer(BaseModule):
+class ImageTreensformerV2(BaseModule):
     def __init__(
         self,
         input_shape: tuple,      # (C, H, W)
@@ -24,71 +22,39 @@ class ImageTreensformer(BaseModule):
         dropout: float = 0.4,
         T_Threshold=0,
     ):
-        super(ImageTreensformer, self).__init__(input_shape=input_shape, output_shape=output_shape)
+        super(ImageTreensformerV2, self).__init__(input_shape=input_shape, output_shape=output_shape)
         print("Building ImageTreensformer")
-        # -------------------------------------------------
-        # Basic definitions
-        # -------------------------------------------------
+        
+        # Initialize basic parameters
         self.patch_size = patch_size
-        self.num_patches = (input_shape[1] // patch_size) * (input_shape[2] // patch_size)
-        self.num_children = 4 #will only work for quad-tree for now
-        # For a perfect quad-tree: log(...) etc. 
-        self.num_levels = math.log(math.sqrt(self.num_patches), math.sqrt(self.num_children)) + 1
+        self.H = input_shape[1] // patch_size
+        self.W = input_shape[2] // patch_size
+        
+        
+        
+        self.num_children_h = 2  # Quad-tree structure
+        self.num_children_w = 2
+        
+        n_h_levels = math.log(self.H, self.num_children_h) + 1
+        n_w_levels = math.log(self.W, self.num_children_w) + 1
+        
+        assert n_h_levels.is_integer(), "Image size must be compatible with number of children"
+        assert n_w_levels.is_integer(), "Image size must be compatible with number of children"
+        assert n_h_levels == n_w_levels, "Image size must be compatible with number of children"
+        
+        self.num_patches = self.H * self.W
+        self.num_levels = n_w_levels
+        
         assert self.num_levels.is_integer(), "Image size must be compatible with number of children"
         self.num_levels = int(self.num_levels)
         
-        self.n_nodes = sum(self.num_children**i for i in range(self.num_levels))
-
-        
         self.embed_dim = embedding_size
         self.flatten_dim = patch_size * patch_size * input_shape[0]
-        
-        assert input_shape[1] == input_shape[2], "Input image must be square (H==W)."
-
-
-
-        # -------------------------------------------------
-        # Build the tree structure and mask ONCE at init
-        # -------------------------------------------------
-        # 1) Build a dummy patch-grid that has shape (1, h, w, flatten_dim).
-        h = input_shape[1] // patch_size
-        w = input_shape[2] // patch_size
-        # Make a dummy tensor; the actual values don't matter, just shape
-        dummy_x = torch.zeros(1, h, w, self.flatten_dim)  
-        # We'll store parent_map, children_map, sibling_map as normal dicts
-        self.parent_map = {}
-        self.children_map = defaultdict(list)
-        self.sibling_map = defaultdict(list)
-
-        # 2) Build the DFS-based tree => returns (B=1, n_nodes, flatten_dim)
-        x_tree = self.build_token_tree(dummy_x)  # shape => (1, n_nodes, flatten_dim)
-
-        # 3) Create the mask (n_nodes, n_nodes) or (1, n_nodes, n_nodes)
-        #    as you see fit. Then store as a buffer so it moves with .to(device)
-        tree_mask = self._create_mask(x_tree)
-
-        self.register_buffer("tree_mask", tree_mask)
-        
-        # -------------------------------------------------
-        # Layers
-        # -------------------------------------------------
+     
+        # Define layers
         self.embedding = nn.Linear(self.flatten_dim, self.embed_dim)
         self.positional_embeddings = nn.Parameter(torch.zeros(1, self.n_nodes, self.embed_dim))
 
-        # self.transformer = nn.Sequential(
-        #     *[
-        #         TreensformerBlock(
-        #             self.n_nodes,
-        #             self.embed_dim,
-        #             num_heads,
-        #             dropout,
-        #             dropout,
-        #             T_Threshold=T_Threshold,
-        #             tree_mask=self.tree_mask,
-        #         )
-        #         for _ in range(num_layers)
-        #     ]
-        # )
         self.transformer = nn.Sequential(
             *[
                 TreensformerBlock(
@@ -102,38 +68,36 @@ class ImageTreensformer(BaseModule):
                     tree_structure=(self.parent_map, self.children_map, self.sibling_map, self.num_levels),
                     mlp_type="full_branch",
                     attn_type="per_node"
-
                 )
                 for _ in range(num_layers)
             ]
         )
-        self.mlp_cls = nn.Linear(self.embed_dim*1, self.output_size) #the root token is the cls token
+        self.mlp_cls = nn.Linear(self.embed_dim * 1, self.output_size)  # Root token is the classification token
 
     def forward(self, x):
         """
-        In forward, you can do normal patch extraction + embedding,
-        but the mask (self.tree_mask) is already built and ready for use.
+        Forward pass: extract patches, embed them, and apply the transformer.
         """
         B, C, H, W = x.shape
 
-        # Basic patch extraction for real data:
-        #  (B, C, H//ps, W//ps, ps, ps) => rearr => (B, h, w, flatten_dim)
+        # Extract patches and reshape
         x = x.unfold(2, self.patch_size, self.patch_size)
         x = x.unfold(3, self.patch_size, self.patch_size)
-        # Move patch dimension forward => (B, h, w, C, ps, ps)
         x = x.permute(0, 2, 3, 1, 4, 5).contiguous()
         B_, h, w, C_, ps1, ps2 = x.shape
         x = x.view(B_, h, w, C_ * ps1 * ps2)  # (B, h, w, flatten_dim)
 
-        x = self.build_token_tree(x)  # (1, n_nodes, flatten_dim)
+        x = self.build_token_tree(x)  # Build token tree
         # self.visualize_tree_mask()
-        #---------------------------------------------------
-        # Forward pass
+        
+        # Forward pass through the network
         x = self.embedding(x)  # (1, n_nodes, embed_dim)
         x = x + self.positional_embeddings
-        x = self.transformer(x) # (B, n_nodes, embed_dim)
+        x = self.transformer(x)  # (B, n_nodes, embed_dim)
         x = self.mlp_cls(x[:, 0, :])  # (B, output_size)
         return x
+    
+
     # ----------------------------------------------------------------
         
 
