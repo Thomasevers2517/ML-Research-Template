@@ -2,7 +2,7 @@ import src.data.Image_Dataloader as Image_Dataloader
 from src.training.base.BaseTrainer import BaseTrainer
 import src.models.euclidean.image.ImageMLP as ImageMLP
 import src.models.euclidean.image.VIT as VIT
-import src.models.euclidean.image.ImageTreensformer as ImageTreensformer
+import src.models.euclidean.image.ImageTreensformerV2 as ImageTreensformerV2
 import torch
 import wandb
 import yaml
@@ -11,8 +11,8 @@ from ptflops import get_model_complexity_info
 import torch._dynamo
 
 if __name__ == '__main__':
-    # with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
-    with open("/users/thomasevers/users/thomas/ML_Research_Template/ML-Research-Template/TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
+    with open("TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
+    # with open("/users/thomasevers/users/thomas/ML_Research_Template/ML-Research-Template/TEMPLATE/configs/training/default_run_config.yaml", 'r') as f:
         DF_TRAIN_CONFIG = yaml.safe_load(f)["TRAIN_CONFIG"]
     Warning("Public wandb key is being used and on git")
     wandb.login(key="3cfa8ad4071af79aa5f7a00bb091ba6b46ac71e1")
@@ -90,7 +90,7 @@ if __name__ == '__main__':
                         num_cls_tkn = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
                         ).to(device)
     elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformer':
-        model = ImageTreensformer.ImageTreensformer(input_shape=input_shape, output_shape=targets_shape,
+        model = ImageTreensformerV2.ImageTreensformerV2(input_shape=input_shape, output_shape=targets_shape,
                                                     num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
                                                     embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                                                     num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
