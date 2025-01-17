@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 from src.models.euclidean.base.Tranformer.Attentions.DynamicAttention import MultiheadDynamicSelfAttention
+from src.models.euclidean.base.Treensformer.TreeAttention import TreeAttention
 import seaborn as sns
 # -----------------------------------------------------------------------------
 
@@ -30,7 +31,7 @@ class TreensformerBlockV3(nn.Module):
         super().__init__()
         print("Building TreensformerBlock")
 
-        self.attn = MultiheadDynamicSelfAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
+        self.tree_attn = TreeAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
                                            attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold)
         self.ln_1 = nn.LayerNorm(n_embd)
         self.ln_2 = nn.LayerNorm(n_embd)
@@ -46,11 +47,18 @@ class TreensformerBlockV3(nn.Module):
     def forward(self, x):
         """ Forward pass for the Block class """
         B, N_PATCHES, N_LEVELS, R = x.size()
+        H = int(math.sqrt(N_PATCHES))
+        W = int(math.sqrt(N_PATCHES))
+        
         C = R*N_LEVELS
         x = x.view(B, N_PATCHES, C)
-        x = x + self.attn(self.ln_1(x))
+        x = self.ln_1(x)
+        
         x = x.view(B, H, W, N_LEVELS, R)
-        x = self.equalize_parents(x, H, W)
+        x = x + self.tree_attn(x)
+        
+        x = x.view(B, H, W, N_LEVELS, R)
+        x = self.equalize_parents(x)
         x = x.view(B, N_PATCHES, C)
 
         x = x + self.mlpf(self.ln_2(x))
@@ -60,7 +68,7 @@ class TreensformerBlockV3(nn.Module):
         
         x = x.view(B, H, W, N_LEVELS, R)
         
-        x = self.equalize_parents(x, H, W)
+        x = self.equalize_parents(x)
             
         x = x.view(B, N_PATCHES, N_LEVELS, R)
         return x
@@ -82,3 +90,4 @@ class TreensformerBlockV3(nn.Module):
             x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R
             x_temp = torch.repeat_interleave(x_temp, repeats=h_num_sum, dim=1)
             x[:, :, :, i, :] = torch.repeat_interleave(x_temp, repeats=w_num_sum, dim=2)
+        return x
