@@ -10,7 +10,7 @@ import re
 from src.utils.logging.WandbLogger import WandbLogger
 
 class BaseTrainer:
-    def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, 
+    def __init__(self, model: Module, train_loader: DataLoader, val_loader: DataLoader, test_loader: DataLoader, optimizer: Optimizer, 
                  loss_fn: Callable, device: torch.device, data_parallel: bool,
                  val_interval: int = 1, log_interval: int = 1, EarlyStopper = None, scheduler = None, store_best_model = False):
         """
@@ -29,6 +29,7 @@ class BaseTrainer:
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.test_loader = test_loader
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = device
@@ -82,8 +83,8 @@ class BaseTrainer:
 
             
         epoch_pbar.close()
-        self.on_training_end()
-        return self.best_model
+        test_loss, test_accuracy =  self.on_training_end()
+        return self.best_model, test_loss, test_accuracy
     def on_training_end(self) -> None:
         """
         Callback function that is called at the end of the training process.
@@ -93,7 +94,7 @@ class BaseTrainer:
         if not self.store_best_model:
             import os
             os.remove(self.best_model_path)
-        pass
+        return test_loss, test_accuracy
 
     
     def train_epoch(self, epoch:int) -> float:
@@ -183,12 +184,17 @@ class BaseTrainer:
         """
         self.on_batch_start()
         self.optimizer.zero_grad()
-        loss = self.calculate_batch_loss(inputs, targets)
-        loss.backward()
+        total_loss, pred_loss, reg_loss = self.calculate_batch_loss(inputs, targets) 
+        
+        if True:
+            total_loss.backward(retain_graph=True)
+            Warning("Retain graph is True")
+        else:
+            total_loss.backward()
         self.optimizer.step()
         
         self.on_batch_end()
-        return loss.item()
+        return total_loss.item()
     
     def calculate_batch_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> float:
         """
@@ -206,10 +212,17 @@ class BaseTrainer:
         outputs = self.model(inputs)
         targets = targets.to(self.device)
 
-        loss = self.loss_fn(outputs, targets)
-        
-        
-        return loss
+        pred_loss = self.loss_fn(outputs, targets)
+        reg_loss = self.calculate_regularisation_loss()
+        total_loss = pred_loss + reg_loss
+        return total_loss, pred_loss, reg_loss
+    
+    def calculate_regularisation_loss(self) -> float:
+        reg_loss = 0
+        for treensblock in self.model.treensformer:
+            reg_loss = reg_loss + treensblock.reg_loss
+            treensblock.reg_loss = 0
+        return reg_loss
     
     def calculate_data_loss(self, dataloader: DataLoader) -> float:
         """
@@ -223,15 +236,21 @@ class BaseTrainer:
         """
         self.model.eval()
         total_loss = 0
+        total_pred_loss = 0
+        total_reg_loss = 0
         with torch.no_grad():
             for [inputs, targets] in dataloader:
                 self.on_batch_start()
-                loss = self.calculate_batch_loss(inputs, targets)
+                loss, pred_loss, reg_loss = self.calculate_batch_loss(inputs, targets)
                 self.on_batch_end()
                 total_loss += loss.item()
-        avg_loss = total_loss / len(dataloader)
+                total_pred_loss += pred_loss.item()
+                total_reg_loss += reg_loss.item()
+        avg_total_loss = total_loss / len(dataloader)
+        avg_pred_loss = total_pred_loss / len(dataloader)
+        avg_reg_loss = total_reg_loss / len(dataloader)
         
-        return avg_loss
+        return avg_total_loss, avg_pred_loss, avg_reg_loss
     
     def validate(self) -> float:
         """
@@ -242,10 +261,10 @@ class BaseTrainer:
         """
         self.on_validation_start()
         
-        val_loss = self.calculate_data_loss(self.val_loader) 
+        avg_val_total_loss, avg_val_pred_loss, val_reg_loss = self.calculate_data_loss(self.val_loader) 
         
-        self.on_validation_end(val_loss=val_loss)
-        return val_loss
+        self.on_validation_end(total_val_loss=avg_val_total_loss, val_pred_loss=avg_val_pred_loss, val_reg_loss=val_reg_loss)
+        return avg_val_total_loss
     
     def on_validation_start(self) -> None:
         """
@@ -253,14 +272,18 @@ class BaseTrainer:
         """
         pass
     
-    def on_validation_end(self, val_loss: float) -> None:
+    def on_validation_end(self, total_val_loss, val_pred_loss=None, val_reg_loss=None) -> None:
         
         """
         Callback function that is called at the end of the validation step.
         """
         wandb.log({
-            "val_loss": val_loss
-        })
+                "val_loss": total_val_loss,
+                "val_pred_loss": val_pred_loss,
+                "val_reg_loss": val_reg_loss
+            })
+        
+        
         pass
         
     

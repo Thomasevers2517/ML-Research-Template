@@ -21,6 +21,7 @@ class ImageTreensformerV2(BaseModule):
         patch_size: int,
         dropout: float = 0.4,
         T_Threshold=0,
+        h_reg = 0
     ):
         super(ImageTreensformerV2, self).__init__(input_shape=input_shape, output_shape=output_shape)
         print("Building ImageTreensformer")
@@ -63,6 +64,7 @@ class ImageTreensformerV2(BaseModule):
                     dropout,
                     dropout,
                     T_Threshold=T_Threshold,
+                    h_reg = h_reg
                 )
                 for _ in range(num_layers)
             ]

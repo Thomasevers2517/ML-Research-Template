@@ -95,7 +95,9 @@ if __name__ == '__main__':
                                                     embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                                                     num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
                                                     patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
-                                                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD']).to(device)
+                                                    T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                                                    h_reg= TRAIN_CONFIG['MODEL_PARAMS']['H_REG']
+                                                    ).to(device)
     
 
     macs, params = get_model_complexity_info(
@@ -134,11 +136,11 @@ if __name__ == '__main__':
                                       verbose=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['VERBOSE'], 
                                       delta=TRAIN_CONFIG['EARLY_STOPPING_PARAMS']['DELTA'])
     
-    trainer = BaseTrainer(model, train_loader, val_loader, optimizer, loss_fn, device, data_parallel=TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL'], 
+    trainer = BaseTrainer(model, train_loader, val_loader, test_loader, optimizer, loss_fn, device, data_parallel=TRAIN_CONFIG['TRAINER_PARAMS']['DATA_PARALLEL'], 
                           log_interval=TRAIN_CONFIG['TRAINER_PARAMS']['LOG_INTERVAL'], EarlyStopper=early_stopper, scheduler=scheduler)
     
     if TRAIN_CONFIG['EMIT_NVTX']:
         with torch.autograd.profiler.emit_nvtx():
-            test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+            best_model, test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
     else:
-        test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+        best_model, test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])

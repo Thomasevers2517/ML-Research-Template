@@ -22,10 +22,9 @@ class NewGELU(nn.Module):
 class TreensformerBlockV2(nn.Module):
     
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, h_reg=0):
         """ Constructor for the Block class 
         Args:
-            tree_structure: A tuple  (parent_map, children_map, sibling_map, n_levels) representing the tree structure
             """
         
         super().__init__()
@@ -43,6 +42,7 @@ class TreensformerBlockV2(nn.Module):
         )
         
         self.reg_loss = 0
+        self.h_reg = h_reg
 
     def forward(self, x):
         """ Forward pass for the Block class """
@@ -52,16 +52,16 @@ class TreensformerBlockV2(nn.Module):
         x = x + self.attn(self.ln_1(x))
         x = x + self.mlpf(self.ln_2(x))
         x = x.view(B, N_PATCHES, N_LEVELS, R)
-        self.reg_loss += self.hierarchy_regularisation(x, alpha=0.1)
+        self.reg_loss = self.reg_loss + self.regularisations(x, self.h_reg)
 
         return x
     
-    def regularisations(self, x, alpha):
-        loss = self.hierarchy_regularisation(x, alpha)
+    def regularisations(self, x, h_reg):
+        loss = h_reg * self.hierarchy_regularisation(x)
         return loss 
     
-    def hierarchy_regularisation(self, x, alpha):
-        loss = alpha * torch.var(x[:,:,0,:], dim=1).sum() # 
-        loss += alpha * torch.var(x[:,:,1,:], dim=1).sum() #
+    def hierarchy_regularisation(self, x):
+        loss = torch.var(x[:,:,0,:], dim=1).mean() # root
+        loss = loss + torch.var(x[:,:,1,:], dim=1).mean() #
         return loss
         

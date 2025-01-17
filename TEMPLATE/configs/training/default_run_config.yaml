@@ -2,12 +2,13 @@ TRAIN_CONFIG:
     TEST_RUN: True
     MODEL: "ImageTreensformer"
     MODEL_PARAMS:
-        NUM_LAYERS: 1
-        EMBEDDING_SIZE: 32
+        NUM_LAYERS: 4
+        EMBEDDING_SIZE: 64
         NUM_HEADS: 4
         PATCH_SIZE: 4
         T_THRESHOLD: 0
         NUM_CLS: 1
+        H_REG: 0
     OPTIMIZER: "AdamW"
     OPTIMIZER_PARAMS:
         LR: 0.0006
