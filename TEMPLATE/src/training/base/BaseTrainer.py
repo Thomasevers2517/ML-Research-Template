@@ -52,7 +52,7 @@ class BaseTrainer:
         self.EarlyStopper = EarlyStopper
         self.scheduler = scheduler
         
-        self.best_model_path = f"best_model_{np.random.randint(100000)}.pth"
+        self.best_model_path = f"TEMPLATE/logging/best_models/best_model_{np.random.randint(100000)}.pth"
         self.store_best_model = store_best_model
 
     def train(self, epochs: int) -> None:
@@ -70,9 +70,9 @@ class BaseTrainer:
             if epoch % self.val_interval == 0:
                 val_loss = self.validate()
                 if self.EarlyStopper.check_improvement(val_loss):
-                    torch.save(self.model.state_dict(), self.best_model_path)
-
                     break
+                if self.EarlyStopper.loss_improved():
+                    torch.save(self.model.state_dict(), self.best_model_path)
 
                 
             
@@ -84,13 +84,14 @@ class BaseTrainer:
             
         epoch_pbar.close()
         test_loss, test_accuracy =  self.on_training_end()
-        return self.best_model, test_loss, test_accuracy
+        return test_loss, test_accuracy
+    
     def on_training_end(self) -> None:
         """
         Callback function that is called at the end of the training process.
         """
         test_loss = self.test(self.test_loader)
-        test_accuracy = self.get_test_accuracy(self.test_loader, 'best_model.pth')
+        test_accuracy = self.get_test_accuracy(self.test_loader, self.best_model_path)
         if not self.store_best_model:
             import os
             os.remove(self.best_model_path)
@@ -218,10 +219,10 @@ class BaseTrainer:
         return total_loss, pred_loss, reg_loss
     
     def calculate_regularisation_loss(self) -> float:
-        reg_loss = 0
-        for treensblock in self.model.treensformer:
-            reg_loss = reg_loss + treensblock.reg_loss
-            treensblock.reg_loss = 0
+        reg_loss = torch.tensor(0.0, requires_grad=True)
+        # for treensblock in self.model.treensformer:
+        #     reg_loss = reg_loss + treensblock.reg_loss
+        #     treensblock.reg_loss = 0
         return reg_loss
     
     def calculate_data_loss(self, dataloader: DataLoader) -> float:
@@ -295,7 +296,8 @@ class BaseTrainer:
         Returns:
             float: The average loss on the test dataset.
         """
-        test_loss = self.calculate_data_loss(test_loader)
+        test_loss, _, _ = self.calculate_data_loss(test_loader)
+        print(f"Test loss: {test_loss}")
         wandb.log({"test_loss": test_loss})
         return test_loss
 
@@ -310,7 +312,8 @@ class BaseTrainer:
         Returns:
             float: The accuracy of the model on the test dataset.
         """
-        self.model.load_state_dict(torch.load(model_weights_path))
+        print("Getting the test accuracy of the best model")
+        self.model.load_state_dict(torch.load(model_weights_path, weights_only=True))
         self.model.eval()
         correct = 0
         total = 0

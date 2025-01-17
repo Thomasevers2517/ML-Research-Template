@@ -2,6 +2,7 @@ import src.data.Image_Dataloader as Image_Dataloader
 from src.training.base.BaseTrainer import BaseTrainer
 import src.models.euclidean.image.ImageMLP as ImageMLP
 import src.models.euclidean.image.VIT as VIT
+import src.models.euclidean.image.ImageTreensformerV2 as ImageTreensformerV2
 import src.models.euclidean.image.ImageTreensformerV3 as ImageTreensformerV3
 import torch
 import wandb
@@ -89,8 +90,8 @@ if __name__ == '__main__':
                         T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
                         num_cls_tkn = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
                         ).to(device)
-    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformer':
-        model = ImageTreensformerV3.ImageTreensformerV2(input_shape=input_shape, output_shape=targets_shape,
+    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV2':
+        model = ImageTreensformerV2.ImageTreensformerV2(input_shape=input_shape, output_shape=targets_shape,
                                                     num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
                                                     embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                                                     num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
@@ -98,6 +99,14 @@ if __name__ == '__main__':
                                                     T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
                                                     h_reg= TRAIN_CONFIG['MODEL_PARAMS']['H_REG']
                                                     ).to(device)
+    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV3':
+        model = ImageTreensformerV3.ImageTreensformerV3(input_shape=input_shape, output_shape=targets_shape,
+                                                        num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                                                        embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                                                        num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                                                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                                                        T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                                                        ).to(device)
     
 
     macs, params = get_model_complexity_info(
@@ -141,6 +150,6 @@ if __name__ == '__main__':
     
     if TRAIN_CONFIG['EMIT_NVTX']:
         with torch.autograd.profiler.emit_nvtx():
-            best_model, test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+            test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
     else:
-        best_model, test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+        test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])

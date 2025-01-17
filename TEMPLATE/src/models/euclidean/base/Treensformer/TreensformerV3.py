@@ -41,7 +41,7 @@ class TreensformerBlockV3(nn.Module):
             nn.Linear(n_embd * 4, n_embd),
         )
         
-        self.reg_loss = 0
+        self.reg_loss = torch.tensor(0.0, requires_grad=True)
 
     def forward(self, x):
         """ Forward pass for the Block class """
@@ -51,8 +51,8 @@ class TreensformerBlockV3(nn.Module):
         x = x + self.attn(self.ln_1(x))
         x = x + self.mlpf(self.ln_2(x))
         x = x.view(B, N_PATCHES, N_LEVELS, R)
-        H = math.sqrt(N_PATCHES)
-        W = math.sqrt(N_PATCHES)
+        H = int(math.sqrt(N_PATCHES))
+        W = int(math.sqrt(N_PATCHES))
         
         x = x.view(B, H, W, N_LEVELS, R)
         h_summary_size  = 2
@@ -60,7 +60,19 @@ class TreensformerBlockV3(nn.Module):
         for i in range(N_LEVELS):
             h_num_sum = 2**i
             w_num_sum = 2**i
-            x[:, :, :, i, :] =  x[:, :, :, i, :].reshape(B, H/h_num_sum,h_num_sum, W/w_num_sum, w_num_sum, N_LEVELS, R)
-            x[:, :, :, i, :] =  x[:, :, :, i, :].mean(dim=[2, 4])
+            h_n_splits = H//h_num_sum
+            w_n_splits = W//w_num_sum
+            assert isinstance(h_n_splits, int), "h_n_splits must be an integer"
+            assert isinstance(w_n_splits, int), "w_n_splits must be an integer"
+            h_n_splits = int(h_n_splits)
+            w_n_splits = int(w_n_splits)
+            
+            
+            x_temp =  x[:, :, :, i, :].reshape(B, h_n_splits,h_num_sum, w_n_splits, w_num_sum, R)
+            x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R
+            x_temp = torch.repeat_interleave(x_temp, repeats=h_num_sum, dim=1)
+            x[:, :, :, i, :] = torch.repeat_interleave(x_temp, repeats=w_num_sum, dim=2)
+            
+        x = x.view(B, N_PATCHES, N_LEVELS, R)
         return x
     

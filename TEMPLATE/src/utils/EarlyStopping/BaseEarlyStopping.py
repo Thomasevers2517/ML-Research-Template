@@ -21,6 +21,12 @@ class BaseEarlyStopping:
             self.counter = 0
         return self.early_stop
 
+    def loss_improved(self):
+        if self.counter ==0:
+            return True
+        else:
+            return False
+            
     def should_stop(self):
         return self.early_stop
 
