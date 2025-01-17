@@ -49,17 +49,28 @@ class TreensformerBlockV3(nn.Module):
         C = R*N_LEVELS
         x = x.view(B, N_PATCHES, C)
         x = x + self.attn(self.ln_1(x))
+        x = x.view(B, N_PATCHES, N_LEVELS, R)
+        x = x.view(B, H, W, N_LEVELS, R)
+        x = self.equalize_parents(x, H, W)
+        
         x = x + self.mlpf(self.ln_2(x))
         x = x.view(B, N_PATCHES, N_LEVELS, R)
         H = int(math.sqrt(N_PATCHES))
         W = int(math.sqrt(N_PATCHES))
         
         x = x.view(B, H, W, N_LEVELS, R)
+        
+        x = self.equalize_parents(x, H, W)
+            
+        x = x.view(B, N_PATCHES, N_LEVELS, R)
+        return x
+    def equalize_parents(self, x):
+        B, H, W, N_LEVELS, R = x.size()
         h_summary_size  = 2
         w_summary_size = 2
         for i in range(N_LEVELS):
-            h_num_sum = 2**i
-            w_num_sum = 2**i
+            h_num_sum = h_summary_size**i
+            w_num_sum = w_summary_size**i
             h_n_splits = H//h_num_sum
             w_n_splits = W//w_num_sum
             assert isinstance(h_n_splits, int), "h_n_splits must be an integer"
@@ -67,12 +78,7 @@ class TreensformerBlockV3(nn.Module):
             h_n_splits = int(h_n_splits)
             w_n_splits = int(w_n_splits)
             
-            
             x_temp =  x[:, :, :, i, :].reshape(B, h_n_splits,h_num_sum, w_n_splits, w_num_sum, R)
             x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R
             x_temp = torch.repeat_interleave(x_temp, repeats=h_num_sum, dim=1)
             x[:, :, :, i, :] = torch.repeat_interleave(x_temp, repeats=w_num_sum, dim=2)
-            
-        x = x.view(B, N_PATCHES, N_LEVELS, R)
-        return x
-    
