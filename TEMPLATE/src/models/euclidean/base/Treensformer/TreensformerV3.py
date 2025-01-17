@@ -49,10 +49,10 @@ class TreensformerBlockV3(nn.Module):
         C = R*N_LEVELS
         x = x.view(B, N_PATCHES, C)
         x = x + self.attn(self.ln_1(x))
-        x = x.view(B, N_PATCHES, N_LEVELS, R)
         x = x.view(B, H, W, N_LEVELS, R)
         x = self.equalize_parents(x, H, W)
-        
+        x = x.view(B, N_PATCHES, C)
+
         x = x + self.mlpf(self.ln_2(x))
         x = x.view(B, N_PATCHES, N_LEVELS, R)
         H = int(math.sqrt(N_PATCHES))
