@@ -32,7 +32,7 @@ class ImageTreensformerV3(BaseModule):
         self.W = input_shape[2] // patch_size
         
         self.n_patches = self.H * self.W
-        
+        self.num_heads = num_heads
         self.num_children_h = 2  # Quad-tree structure
         self.num_children_w = 2
         
@@ -45,9 +45,12 @@ class ImageTreensformerV3(BaseModule):
         
         self.N = self.H * self.W
         self.n_levels = int(n_w_levels)
+        
 
         
         self.n_emb = embedding_size
+        assert self.n_emb % self.n_levels * self.num_heads == 0, "Embedding size must be divisible by the number of levels times the number of heads, for the tree structure"
+
         self.flat_emb = patch_size * patch_size * input_shape[0]
         assert self.n_emb % self.n_levels == 0, "Embedding size must be divisible by the number of levels"
         # Define layers

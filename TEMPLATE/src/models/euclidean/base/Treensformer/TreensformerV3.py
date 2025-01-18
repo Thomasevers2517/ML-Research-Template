@@ -30,7 +30,7 @@ class TreensformerBlockV3(nn.Module):
         
         super().__init__()
         print("Building TreensformerBlock")
-
+        self.n_head = n_head
         self.tree_attn = TreeAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
                                            attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold)
         self.ln_1 = nn.LayerNorm(n_embd)
@@ -54,6 +54,7 @@ class TreensformerBlockV3(nn.Module):
         x = x.view(B, N_PATCHES, C)
         x = self.ln_1(x)
         
+        x = x.view(B, N_PATCHES, N_LEVELS, R)
         x = x + self.tree_attn(x)
         x = x.view(B, H, W, N_LEVELS, R)
         

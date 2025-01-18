@@ -14,13 +14,13 @@ parameters:
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [8, 16, 24]
+        values: [8, 16]
       EMBEDDING_SIZE:
-        values: [256]
+        values: [240, 480]
       NUM_HEADS:
-        values: [1]
+        values: [4, 8]
       PATCH_SIZE: 
-        values: [4]
+        values: [2, 4]
       T_THRESHOLD:
         values: [0]
       NUM_CLS:
@@ -64,7 +64,7 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [512]
+        values: [256]
       NUM_WORKERS:
         values: [16]
       AUGMENTATION:

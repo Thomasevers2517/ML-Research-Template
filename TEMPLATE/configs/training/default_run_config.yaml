@@ -2,9 +2,9 @@ TRAIN_CONFIG:
     TEST_RUN: True
     MODEL: "ImageTreensformerV3"
     MODEL_PARAMS:
-        NUM_LAYERS: 4
-        EMBEDDING_SIZE: 128
-        NUM_HEADS: 1
+        NUM_LAYERS: 8
+        EMBEDDING_SIZE: 256
+        NUM_HEADS: 4
         PATCH_SIZE: 4
         T_THRESHOLD: 0
         NUM_CLS: 1

@@ -32,7 +32,10 @@ class TreeAttention(nn.Module):
         self.T_Threshold = T_Threshold
 
     def forward(self, x):
-        B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
+        B, N_PATCHES, N_LEVELS, R = x.size()
+        x = x.view(B, N_PATCHES, N_LEVELS*R)
+        T = N_PATCHES
+        C = N_LEVELS*R
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)
@@ -52,6 +55,7 @@ class TreeAttention(nn.Module):
 
         # output projection
         y = self.resid_dropout(self.c_proj(y))
+        y = y.view(B, N_PATCHES, N_LEVELS, R)
         return y
 
     
