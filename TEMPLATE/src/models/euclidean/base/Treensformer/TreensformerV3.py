@@ -54,10 +54,9 @@ class TreensformerBlockV3(nn.Module):
         x = x.view(B, N_PATCHES, C)
         x = self.ln_1(x)
         
-        x = x.view(B, H, W, N_LEVELS, R)
         x = x + self.tree_attn(x)
-        
         x = x.view(B, H, W, N_LEVELS, R)
+        
         x = self.equalize_parents(x)
         x = x.view(B, N_PATCHES, C)
 

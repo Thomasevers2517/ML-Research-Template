@@ -9,18 +9,18 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["VIT"]
+    values: ["VIT", "ImageTreensformerV3"]
       
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
         values: [8, 16]
       EMBEDDING_SIZE:
-        values: [256]
+        values: [512, 256]
       NUM_HEADS:
-        values: [4]
+        values: [1]
       PATCH_SIZE: 
-        values: [2]
+        values: [4]
       T_THRESHOLD:
         values: [0]
       NUM_CLS:
@@ -64,7 +64,7 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [256]
+        values: [512]
       NUM_WORKERS:
         values: [16]
       AUGMENTATION:
