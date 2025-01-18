@@ -14,9 +14,9 @@ parameters:
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [8, 16]
+        values: [8, 16, 24]
       EMBEDDING_SIZE:
-        values: [512, 256]
+        values: [256]
       NUM_HEADS:
         values: [1]
       PATCH_SIZE: 

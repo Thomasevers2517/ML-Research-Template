@@ -90,8 +90,12 @@ class BaseTrainer:
         """
         Callback function that is called at the end of the training process.
         """
+        print("Getting the test accuracy of the best model")
+        self.model.load_state_dict(torch.load(self.best_model_path, weights_only=True))
+        self.model.eval()
+        
         test_loss = self.test(self.test_loader)
-        test_accuracy = self.get_test_accuracy(self.test_loader, self.best_model_path)
+        test_accuracy = self.get_test_accuracy(self.test_loader)
         if not self.store_best_model:
             import os
             os.remove(self.best_model_path)
@@ -301,7 +305,7 @@ class BaseTrainer:
         wandb.log({"test_loss": test_loss})
         return test_loss
 
-    def get_test_accuracy(self, test_loader: DataLoader, model_weights_path: str) -> float:
+    def get_test_accuracy(self, test_loader: DataLoader) -> float:
         """
         Returns the accuracy of the model on the test dataset.
 
@@ -312,9 +316,7 @@ class BaseTrainer:
         Returns:
             float: The accuracy of the model on the test dataset.
         """
-        print("Getting the test accuracy of the best model")
-        self.model.load_state_dict(torch.load(model_weights_path, weights_only=True))
-        self.model.eval()
+
         correct = 0
         total = 0
         with torch.no_grad():

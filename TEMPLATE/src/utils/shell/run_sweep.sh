@@ -1,19 +1,24 @@
 #!/bin/bash
 
-# Check if GPU IDs are provided
-if [ $# -eq 0 ]; then
-    echo "Usage: $0 [GPU IDs]"
+# Check if GPU IDs and project name are provided
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 [project-name] [GPU IDs]"
     exit 1
 fi
+
+# Extract project name and shift it from arguments
+project=$1
+shift 1  # Remove the project name from the argument list
 
 # Generate a random folder name for outputs
 output_folder="TEMPLATE/logging/local_output/$(date +%s%N)"
 echo "Creating output folder: $output_folder"
 mkdir -p "$output_folder"
 
+sweep_config_path="TEMPLATE/configs/training/sweep_config.yaml"
 # Run the sweep command and capture both stdout and stderr
-echo "Running sweep command: wandb sweep TEMPLATE/configs/training/sweep_config.yaml"
-sweep_output=$(wandb sweep TEMPLATE/configs/training/sweep_config.yaml 2>&1)
+echo "Running sweep command: wandb sweep $sweep_config_path"
+sweep_output=$(wandb sweep --project $project $sweep_config_path 2>&1)
 
 # Print the sweep output for debugging
 echo "Sweep Output:"
@@ -32,15 +37,14 @@ fi
 
 # Output the Sweep ID and instructions
 echo "Extracted Sweep ID: $sweep_id"
-echo "View sweep at: https://wandb.ai/thomasevers9/ML-Research-Template-TEMPLATE/sweeps/$sweep_id"
-echo "Run sweep agent with: wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id"
+echo "View sweep at: https://wandb.ai/thomasevers9/$project/sweeps/$sweep_id"
+echo "Run sweep agent with: wandb agent thomasevers9/$project/$sweep_id"
 
 # Start the sweep agent using the provided GPU IDs
 echo "Starting sweep agent on GPUs: $@"
 for i in $@; do
     log_file="$output_folder/gpu$i.txt"
-    echo "Running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > $log_file &"
+    echo "Running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/$project/$sweep_id > $log_file &"
 
-    CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/ML-Research-Template-TEMPLATE/$sweep_id > "$log_file" &
-
+    CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/$project/$sweep_id > "$log_file" &
 done
