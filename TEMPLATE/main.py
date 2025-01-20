@@ -4,6 +4,7 @@ import src.models.euclidean.image.ImageMLP as ImageMLP
 import src.models.euclidean.image.VIT as VIT
 import src.models.euclidean.image.ImageTreensformerV2 as ImageTreensformerV2
 import src.models.euclidean.image.ImageTreensformerV3 as ImageTreensformerV3
+import TEMPLATE.src.models.euclidean.image.ImageTreensformerV4 as ImageTreensformerV4
 import torch
 import wandb
 import yaml
@@ -101,6 +102,15 @@ if __name__ == '__main__':
                                                     ).to(device)
     elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV3':
         model = ImageTreensformerV3.ImageTreensformerV3(input_shape=input_shape, output_shape=targets_shape,
+                                                        num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                                                        embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                                                        num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                                                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                                                        T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                                                        ).to(device)
+        
+    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV4':
+        model = ImageTreensformerV4.ImageTreensformerV4(input_shape=input_shape, output_shape=targets_shape,
                                                         num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
                                                         embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                                                         num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
