@@ -9,7 +9,7 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["VIT", "ImageTreensformerV3"]
+    values: ["ImageTreensformerV4"]
       
   MODEL_PARAMS:
     parameters:

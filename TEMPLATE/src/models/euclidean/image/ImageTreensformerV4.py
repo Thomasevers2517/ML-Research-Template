@@ -67,6 +67,7 @@ class ImageTreensformerV4(BaseModule):
                     dropout,
                     dropout,
                     T_Threshold=T_Threshold,
+                    n_levels=self.n_levels
          
                 )
                 for _ in range(num_layers)

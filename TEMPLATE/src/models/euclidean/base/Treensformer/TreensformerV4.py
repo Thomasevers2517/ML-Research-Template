@@ -23,7 +23,7 @@ class NewGELU(nn.Module):
 class TreensformerBlockV4(nn.Module):
     
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0):
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, n_levels=4):
         """ Constructor for the Block class 
         Args:
             """
@@ -36,11 +36,7 @@ class TreensformerBlockV4(nn.Module):
         self.ln_1 = nn.LayerNorm(n_embd)
         self.ln_2 = nn.LayerNorm(n_embd)
 
-        self.mlpf = nn.Sequential(
-            nn.Linear(n_embd, n_embd * 4),
-            NewGELU(),
-            nn.Linear(n_embd * 4, n_embd),
-        )
+        self.tree_mlp = TreeMLP(n_embd, n_levels)
         
         self.reg_loss = torch.tensor(0.0, requires_grad=True)
 
