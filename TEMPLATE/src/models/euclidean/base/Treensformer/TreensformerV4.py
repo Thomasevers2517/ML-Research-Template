@@ -103,9 +103,9 @@ class TreeMLP(nn.Module):
         
         for i in range(N_LEVELS, 0, -1):
             
-            input = x[:, :, :i, :].view(B, N_PATCHES, (i)*R)
+            input = x[:, :, :i, :].view(B, N_PATCHES, i*R)
             zeros = torch.zeros(B, N_PATCHES, (N_LEVELS-i)*R, device=x.device)
             input = torch.concatenate([input, zeros], dim=2)
-            x[:, :, i, :] = self.mlp(input)
+            x[:, :, i-1, :] = self.mlp(input)
 
         return x

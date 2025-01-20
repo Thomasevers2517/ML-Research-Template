@@ -1,9 +1,9 @@
 TRAIN_CONFIG:
     TEST_RUN: True
-    MODEL: "ImageTreensformerV3"
+    MODEL: "ImageTreensformerV4"
     MODEL_PARAMS:
-        NUM_LAYERS: 8
-        EMBEDDING_SIZE: 128, 256
+        NUM_LAYERS: 4
+        EMBEDDING_SIZE: 128
         NUM_HEADS: 4
         PATCH_SIZE: 4
         T_THRESHOLD: 0
@@ -24,7 +24,7 @@ TRAIN_CONFIG:
     DATA_LOADER_PARAMS:
         DATASET_NAME: "CIFAR100" # Options: ["ImageNet", "CIFAR10", "CIFAR100", "MNIST", "FashionMNIST"]
         DATA_DIR: "data"
-        BATCH_SIZE: 512
+        BATCH_SIZE: 4
         NUM_WORKERS: 4
         AUGMENTATION: True
     WANDB_LOGGING_PARAMS:
