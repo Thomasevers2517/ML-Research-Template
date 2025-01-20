@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 
 from src.models.euclidean.base.BaseModule import BaseModule
-from TEMPLATE.src.models.euclidean.base.Treensformer.TreensformerV4 import TreensformerBlockV4
+from src.models.euclidean.base.Treensformer.TreensformerV4 import TreensformerBlockV4
 
 # Add these imports for visualization
 import networkx as nx

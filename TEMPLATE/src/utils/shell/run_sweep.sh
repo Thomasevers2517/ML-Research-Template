@@ -47,4 +47,5 @@ for i in $@; do
     echo "Running command: CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/$project/$sweep_id > $log_file &"
 
     CUDA_VISIBLE_DEVICES=$i nohup wandb agent thomasevers9/$project/$sweep_id > "$log_file" &
+    sleep 8
 done

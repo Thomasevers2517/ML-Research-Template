@@ -4,7 +4,7 @@ import src.models.euclidean.image.ImageMLP as ImageMLP
 import src.models.euclidean.image.VIT as VIT
 import src.models.euclidean.image.ImageTreensformerV2 as ImageTreensformerV2
 import src.models.euclidean.image.ImageTreensformerV3 as ImageTreensformerV3
-import TEMPLATE.src.models.euclidean.image.ImageTreensformerV4 as ImageTreensformerV4
+import src.models.euclidean.image.ImageTreensformerV4 as ImageTreensformerV4
 import torch
 import wandb
 import yaml
@@ -163,3 +163,4 @@ if __name__ == '__main__':
             test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
     else:
         test_loss, test_accuracy = trainer.train(epochs=TRAIN_CONFIG['OPTIMIZER_PARAMS']['NUM_EPOCHS'])
+        

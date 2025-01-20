@@ -60,18 +60,16 @@ class TreensformerBlockV4(nn.Module):
         
         x = self.equalize_parents(x)
         x = x.view(B, N_PATCHES, C)
+        x = self.ln_2(x)
+        
+        x = x.view(B, N_PATCHES, N_LEVELS, R)
+        
+        x = x + self.tree_mlp(x)
+        
 
-        x = x + self.mlpf(self.ln_2(x))
-        x = x.view(B, N_PATCHES, N_LEVELS, R)
-        H = int(math.sqrt(N_PATCHES))
-        W = int(math.sqrt(N_PATCHES))
-        
-        x = x.view(B, H, W, N_LEVELS, R)
-        
-        x = self.equalize_parents(x)
-            
-        x = x.view(B, N_PATCHES, N_LEVELS, R)
         return x
+    
+    
     def equalize_parents(self, x):
         B, H, W, N_LEVELS, R = x.size()
         h_summary_size  = 2
@@ -90,4 +88,28 @@ class TreensformerBlockV4(nn.Module):
             x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R
             x_temp = torch.repeat_interleave(x_temp, repeats=h_num_sum, dim=1)
             x[:, :, :, i, :] = torch.repeat_interleave(x_temp, repeats=w_num_sum, dim=2)
+        return x
+    
+class TreeMLP(nn.Module):
+    def __init__(self, n_embd, n_levels):
+        super().__init__()
+        self.n_embd = n_embd
+        self.n_levels = n_levels
+        
+        self.mlp = nn.Sequential(
+            nn.Linear(n_embd, n_embd * 4),
+            NewGELU(),
+            nn.Linear(n_embd * 4, n_embd//n_levels),
+        )
+        
+    def forward(self, x):
+        B, N_PATCHES, N_LEVELS, R = x.size()
+        
+        for i in range(N_LEVELS, 0, -1):
+            
+            input = x[:, :, :i, :].view(B, N_PATCHES, (i)*R)
+            zeros = torch.zeros(B, N_PATCHES, (N_LEVELS-i)*R, device=x.device)
+            input = torch.concatenate([input, zeros], dim=2)
+            x[:, :, i, :] = self.mlp(input)
+
         return x
