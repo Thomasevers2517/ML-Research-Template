@@ -16,7 +16,7 @@ parameters:
       NUM_LAYERS:
         values: [16]
       EMBEDDING_SIZE:
-        values: [256]
+        values: [196, 256]
       NUM_HEADS:
         values: [1]
       PATCH_SIZE: 
@@ -64,7 +64,7 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [128]
+        values: [512]
       NUM_WORKERS:
         values: [32]
       AUGMENTATION:

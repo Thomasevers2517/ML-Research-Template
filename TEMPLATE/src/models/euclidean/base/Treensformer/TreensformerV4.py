@@ -128,11 +128,12 @@ class TreeMLPV2(nn.Module):
 
     def forward(self, x):
         B, N_PATCHES, N_LEVELS, R = x.size()
+        outputs = []
         
         for i in range(N_LEVELS):
-            
-            input = x[:, :, i:, :].view(B, N_PATCHES, (N_LEVELS-i)*R)
- 
-            x[:, :, i, :] = self.mlp_list[i](input)
-
+            input = x[:, :, i:, :].view(B, N_PATCHES, (N_LEVELS - i) * R)
+            outputs.append(self.mlp_list[i](input))
+        
+        # Stack outputs along the level dimension
+        x = torch.stack(outputs, dim=2)  # Shape: [B, N_PATCHES, N_LEVELS, R]
         return x
