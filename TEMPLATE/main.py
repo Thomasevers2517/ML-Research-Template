@@ -133,7 +133,9 @@ if __name__ == '__main__':
         print("Compiling model")
         model = torch.compile(model, mode=TRAIN_CONFIG['COMPILATION']['MODE'])
         print("Model compiled")
-    wandb.watch(model)
+        
+    #for watching gradients and parameters
+    # wandb.watch(model)
 
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR'])

@@ -3,12 +3,8 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 
-class TreeAttention(nn.Module):
-    """
-    A vanilla multi-head masked self-attention layer with a projection at the end.
-    It is possible to use torch.nn.MultiheadAttention here but I am including an
-    explicit implementation here to show that there is nothing too scary here.
-    """
+class TreeAttentionV2(nn.Module):
+ 
 
     def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0):
         
@@ -21,9 +17,7 @@ class TreeAttention(nn.Module):
         # regularization
         self.attn_dropout = nn.Dropout(attn_pdrop)
         self.resid_dropout = nn.Dropout(resid_pdrop)
-        # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size))
-                                     .view(1, 1, block_size, block_size))
+
         # just so that the attention map is logged
         self.att_map = AttentionMap()
         
@@ -33,10 +27,9 @@ class TreeAttention(nn.Module):
 
     def forward(self, x):
         B, N_PATCHES, N_LEVELS, R = x.size()
+        N_NODES = N_PATCHES * N_LEVELS
         
-        x = x.view(B, N_PATCHES, N_LEVELS*R)
-        T = N_PATCHES
-        C = N_LEVELS*R
+        q = torch.zeros(B, N_PATCHES, N_LEVELS, R, self.n_embd//self.n_head).to(x.device)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)

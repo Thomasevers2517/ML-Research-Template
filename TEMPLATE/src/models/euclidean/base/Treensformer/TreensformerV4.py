@@ -36,7 +36,7 @@ class TreensformerBlockV4(nn.Module):
         self.ln_1 = nn.LayerNorm(n_embd//n_levels)
         self.ln_2 = nn.LayerNorm(n_embd//n_levels)
 
-        self.tree_mlp = TreeMLPV2(n_embd, n_levels)
+        self.tree_mlp = TreeMLPV3(n_embd, n_levels)
         
         self.reg_loss = torch.tensor(0.0, requires_grad=True)
 
@@ -136,4 +136,30 @@ class TreeMLPV2(nn.Module):
         
         # Stack outputs along the level dimension
         x = torch.stack(outputs, dim=2)  # Shape: [B, N_PATCHES, N_LEVELS, R]
+        return x
+    
+class TreeMLPV3(nn.Module):
+    def __init__(self, n_embd, n_levels):
+        super().__init__()
+        self.n_embd = n_embd
+        self.n_levels = n_levels
+        
+        self.mlp = nn.Sequential(
+            nn.Linear(n_embd, n_embd * 4),
+            NewGELU(),
+            nn.Linear(n_embd * 4, n_embd//n_levels),
+        )
+        
+    def forward(self, x):
+        B, N_PATCHES, N_LEVELS, R = x.size()
+        
+        for i in range(N_LEVELS):
+            
+            input = x[:, :, i:, :].view(B, N_PATCHES, (N_LEVELS-i)*R)
+            avgd = x[:, :, :i, :].view(B, N_PATCHES, i*R)
+            avgd = avgd.mean(dim=1, keepdim=True)
+            avgd = avgd.repeat(1, N_PATCHES, 1)
+            input = torch.concatenate([avgd, input], dim=2)
+            x[:, :, i, :] = self.mlp(input)
+
         return x
