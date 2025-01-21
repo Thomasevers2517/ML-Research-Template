@@ -34,22 +34,28 @@ class TreeAttentionV3(nn.Module):
 
     def forward(self, x):
         B, N_PATCHES, N_LEVELS, R = x.size()
-        
-        
-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        q, k ,v  = self.c_attn(x).split(self.R, dim=2) # (B, N_PATCHES, N_LEVELS, R) -> (B, N_PATCHES, N_LEVELS, R)
-        
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-
-        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        # att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-        att = F.relu(att - self.T_Threshold)
-        att = self.att_map(att)
-        att = self.attn_dropout(att)
+        level_attention = torch.zeros(B, N_PATCHES, N_PATCHES)
+        for i in range(N_LEVELS, 0, -1):
+            # select a single sample of each parent at level i
+            x_temp =  x[:, :, i, :]
+            # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+            q, k ,v  = self.c_attn(x).split(self.R, dim=2) # (B, N_PATCHES, N_LEVELS, R) -> (B, N_PATCHES, N_LEVELS, R)
+            
+            
+            k = k.view(B, self.n_head, N_PATCHES, R // self.n_head).transpose(1, 2)
+            q = q.view(B, self.n_head, N_PATCHES, R // self.n_head).transpose(1, 2)
+            v = v.view(B, self.n_head, N_PATCHES, R // self.n_head).transpose(1, 2)
+            
+            # Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+            
+            
+            # att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            att = F.softmax(att, dim=-1)
+            att = F.relu(att - self.T_Threshold)
+            att = self.att_map(att)
+            att = self.attn_dropout(att)
+            
         y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
