@@ -37,5 +37,5 @@ TRAIN_CONFIG:
         VERBOSE: False
 
     COMPILATION:
-        MODE: "reduce-overhead" # Options: ["default", "full", "reduce-overhead"]
+        MODE: "default" # Options: ["default", "full", "reduce-overhead"]
     EMIT_NVTX: TRUE

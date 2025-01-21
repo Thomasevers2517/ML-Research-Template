@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import math
 import torch.nn.functional as F
-
+from src.models.euclidean.base.Treensformer.avg_siblings import avg_siblings
 class TreeAttentionV2(nn.Module):
  
 
@@ -33,17 +33,11 @@ class TreeAttentionV2(nn.Module):
         
         x_nodes = torch.zeros(B, N_NODES, N_LEVELS, R)
         
+        
         for i in range(N_LEVELS):
             h_num_sum = 2**i
             w_num_sum = 2**i
-            h_n_splits = N_PATCHES//h_num_sum
-            w_n_splits = N_PATCHES//w_num_sum
-            for j in range(h_num_sum):
-                for k in range(w_num_sum):
-                    local_h = int(j*h_n_splits)
-                    local_w = int(k*w_n_splits)
-                    x_temp =  x[:, :, :, i, :].reshape(B, h_n_splits,h_num_sum, w_n_splits, w_num_sum, R)
-                    x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R
+            x_nodes[:, :4**i, i, :] = avg_siblings(x[:, :4**i, i, :], sibling_order=i, h_num_sum=h_num_sum, w_num_sum=w_num_sum)    
                     
         
         q = torch.zeros(B, self.n_head, N_NODES, N_LEVELS * R/self.n_head)

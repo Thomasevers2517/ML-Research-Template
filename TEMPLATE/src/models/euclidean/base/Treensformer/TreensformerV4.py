@@ -7,6 +7,7 @@ from torch.nn import functional as F
 
 from src.models.euclidean.base.Tranformer.Attentions.DynamicAttention import MultiheadDynamicSelfAttention
 from src.models.euclidean.base.Treensformer.TreeAttention import TreeAttention
+from src.models.euclidean.base.Treensformer.avg_siblings import avg_siblings
 import seaborn as sns
 # -----------------------------------------------------------------------------
 
@@ -63,6 +64,7 @@ class TreensformerBlockV4(nn.Module):
         
         x = x + self.tree_mlp(self.ln_2(x))
         
+        x = x.view(B, N_PATCHES, N_LEVELS, R)
 
         return x
     
@@ -75,33 +77,7 @@ class TreensformerBlockV4(nn.Module):
             x[:, :, :, i, :] = avg_siblings(x[:, :, :, i, :], sibling_order=i, h_summary_size=h_summary_size, w_summary_size=w_summary_size)
         return x
     
-def avg_siblings(self, x,sibling_order, h_summary_size=1, w_summary_size=1):
-    """ Average the siblings of a node in the tree.
-    Args:
-        x: torch.Tensor of shape (B, H, W, R)
-        sibling_order: int, the order of the siblings to average
-        h_summary_size: int, the size of the summary in the height dimension
-        w_summary_size: int, the size of the summary in the width dimension
-        Returns:
-        x: torch.Tensor of shape (B, H, W, R)
-        """
-    
-    B, H, W, R = x.size()
-    
-    h_num_sum = h_summary_size**sibling_order
-    w_num_sum = w_summary_size**sibling_order
-    h_n_splits = H//h_num_sum
-    w_n_splits = W//w_num_sum
 
-    assert isinstance(h_n_splits, int), "h_n_splits must be an integer"
-    assert isinstance(w_n_splits, int), "w_n_splits must be an integer"
-    h_n_splits = int(h_n_splits)
-    w_n_splits = int(w_n_splits)
-    
-    x_temp =  x.reshape(B, h_n_splits,h_num_sum, w_n_splits, w_num_sum, R)
-    x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R
-    x_temp = torch.repeat_interleave(x_temp, repeats=h_num_sum, dim=1)
-    return torch.repeat_interleave(x_temp, repeats=w_num_sum, dim=2)
 
     
 class TreeMLP(nn.Module):
@@ -153,35 +129,79 @@ class TreeMLPV2(nn.Module):
         # Stack outputs along the level dimension
         x = torch.stack(outputs, dim=2)  # Shape: [B, N_PATCHES, N_LEVELS, R]
         return x
-    
+        
 class TreeMLPV3(nn.Module):
     def __init__(self, n_embd, n_levels):
         super().__init__()
         self.n_embd = n_embd
         self.n_levels = n_levels
-        
+        # MLP: in_features = n_embd, out_features = n_embd//n_levels
+        # Because each 'level' embedding has dimension R = (n_embd // n_levels)
         self.mlp = nn.Sequential(
             nn.Linear(n_embd, n_embd * 4),
             NewGELU(),
-            nn.Linear(n_embd * 4, n_embd//n_levels),
+            nn.Linear(n_embd * 4, n_embd // n_levels),
         )
-        
-    def forward(self, x):
-        B, H, W, N_LEVELS, R = x.size()
-        
-        for i in range(N_LEVELS):
-            
-            input = x[:, :, :, i:, :].view(B, H, W, (N_LEVELS-i)*R)
-            if i == 0:
-                x[:, :, :, i, :] = self.mlp(input)
-                continue
-            
-            avgd = x[:, :, :, :i, :].view(B, H, W, i*R)
-            avgd = avgd.view(B, H, W, i, R)
-            for j in range(i):
-                avgd = avg_siblings(avgd[:, :, :, j, :], sibling_order=i, h_summary_size=2, w_summary_size=2)
-            input = torch.concatenate([avgd, input], dim=2)
-            
-            x[:, :, :, i, :] = self.mlp(input)
 
-        return x
+    def forward(self, x):
+        """
+        x shape: (B, H, W, N_LEVELS, R)
+          - Index=0 => 'children' level (lowest in the hierarchy).
+          - Index=N_LEVELS-1 => 'root' level (highest).
+
+        The idea:
+          - For each level i in [0..N_LEVELS-1],
+              * If i==0 => we are updating the "child" embedding
+                           no averaging from 'below' because there's no lower level.
+              * If i>0  => we gather the block of lower levels [0..i-1], average them
+                           (since they are the true children). Then we combine them
+                           with the block [i..end], flatten, and feed into MLP.
+          - We'll build the updated embeddings for all levels in an out-of-place
+            list, then cat them along dim=3 to produce shape (B, H, W, N_LEVELS, R).
+        """
+        B, H, W, N_LEVELS, R = x.size()
+
+        # We'll store updated embeddings for each level i in out_slices
+        out_slices = []
+
+        for i in range(N_LEVELS):
+            # 'i' is the level we're updating:
+            #   i=0 => 'lowest' (children),
+            #   i=N_LEVELS-1 => 'root'.
+
+            # The "upper" block is x[:, :, :, i:, :] => shape (B,H,W, N_LEVELS-i, R).
+            upper_block = x[:, :, :, i:, :]  # everything from 'i' up to root
+
+            if i == 0:
+                # The bottommost children: no "lower levels" exist.
+                # So we just flatten (N_LEVELS * R) => pass MLP
+                merged = upper_block.reshape(B, H, W, self.n_embd)
+            else:
+                # We have 'i' lower levels => index [0..i-1]
+                # We'll average them because they are the "children" we need summarized
+                lower_block = x[:, :, :, :i, :].clone()
+
+                # For each of these i levels, do your "avg_siblings" or relevant averaging
+                for child_idx in range(i):
+                    lower_block[:, :, :, child_idx, :] = avg_siblings(
+                        lower_block[:, :, :, child_idx, :],
+                        sibling_order=i,  # or child_idx, depending on your usage
+                        h_summary_size=2,
+                        w_summary_size=2
+                    )
+
+                # Concat the lower block + upper block across the level dimension=3
+                merged_full = torch.cat([lower_block, upper_block], dim=3)  # shape (B,H,W, N_LEVELS, R)
+                merged = merged_full.reshape(B, H, W, self.n_embd)
+
+            # Pass the flattened (N_LEVELS*R) data into MLP => shape (B,H,W,R)
+            new_slice = self.mlp(merged)  # out => (B,H,W, R)
+
+            # Store it (dim=3 => one slice for level i)
+            new_slice = new_slice.unsqueeze(3)  # shape => (B,H,W,1,R)
+            out_slices.append(new_slice)
+
+        # Finally, cat along dim=3 => shape (B,H,W,N_LEVELS,R)
+        out = torch.cat(out_slices, dim=3)
+        return out
+
