@@ -33,10 +33,10 @@ class TreensformerBlockV4(nn.Module):
         self.n_head = n_head
         self.tree_attn = TreeAttention(block_size= block_size, n_embd=n_embd, n_head=n_head, 
                                            attn_pdrop=attn_pdrop, resid_pdrop=resid_pdrop, T_Threshold=T_Threshold)
-        self.ln_1 = nn.LayerNorm(n_embd)
-        self.ln_2 = nn.LayerNorm(n_embd)
+        self.ln_1 = nn.LayerNorm(n_embd//n_levels)
+        self.ln_2 = nn.LayerNorm(n_embd//n_levels)
 
-        self.tree_mlp = TreeMLP(n_embd, n_levels)
+        self.tree_mlp = TreeMLPV2(n_embd, n_levels)
         
         self.reg_loss = torch.tensor(0.0, requires_grad=True)
 
@@ -48,19 +48,21 @@ class TreensformerBlockV4(nn.Module):
         
         C = R*N_LEVELS
         x = x.view(B, N_PATCHES, C)
-        x = self.ln_1(x)
         
         x = x.view(B, N_PATCHES, N_LEVELS, R)
-        x = x + self.tree_attn(x)
+        
+        
+
+        x = x + self.tree_attn(self.ln_1(x))
         x = x.view(B, H, W, N_LEVELS, R)
         
         x = self.equalize_parents(x)
         x = x.view(B, N_PATCHES, C)
-        x = self.ln_2(x)
         
         x = x.view(B, N_PATCHES, N_LEVELS, R)
         
-        x = x + self.tree_mlp(x)
+        
+        x = x + self.tree_mlp(self.ln_2(x))
         
 
         return x
@@ -101,11 +103,36 @@ class TreeMLP(nn.Module):
     def forward(self, x):
         B, N_PATCHES, N_LEVELS, R = x.size()
         
-        for i in range(N_LEVELS, 0, -1):
+        for i in range(N_LEVELS):
             
-            input = x[:, :, :i, :].view(B, N_PATCHES, i*R)
-            zeros = torch.zeros(B, N_PATCHES, (N_LEVELS-i)*R, device=x.device)
-            input = torch.concatenate([input, zeros], dim=2)
-            x[:, :, i-1, :] = self.mlp(input)
+            input = x[:, :, i:, :].view(B, N_PATCHES, (N_LEVELS-i)*R)
+            zeros = torch.zeros(B, N_PATCHES, i*R, device=x.device)
+            input = torch.concatenate([zeros, input], dim=2)
+            x[:, :, i, :] = self.mlp(input)
+
+        return x
+    
+class TreeMLPV2(nn.Module):
+    def __init__(self, n_embd, n_levels):
+        super().__init__()
+        self.n_embd = n_embd
+        self.n_levels = n_levels
+        
+        self.mlp_list = nn.ModuleList()
+        for i in range(n_levels):
+            self.mlp_list.append(nn.Sequential(
+                nn.Linear(n_embd*(n_levels-i)//n_levels, n_embd//n_levels * 4),
+                NewGELU(),
+                nn.Linear(n_embd//n_levels * 4, n_embd//n_levels),
+            ))
+
+    def forward(self, x):
+        B, N_PATCHES, N_LEVELS, R = x.size()
+        
+        for i in range(N_LEVELS):
+            
+            input = x[:, :, i:, :].view(B, N_PATCHES, (N_LEVELS-i)*R)
+ 
+            x[:, :, i, :] = self.mlp_list[i](input)
 
         return x
