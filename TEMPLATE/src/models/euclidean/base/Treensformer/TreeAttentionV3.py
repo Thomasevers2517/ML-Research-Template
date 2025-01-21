@@ -3,15 +3,22 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 from src.models.euclidean.base.Treensformer.avg_siblings import avg_siblings
-class TreeAttentionV2(nn.Module):
+class TreeAttentionV3(nn.Module):
  
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0):
-        
+    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, n_levels=4):
+        """ V3 takes only the lose embedding and not the parent embeddings. 
+        But the attention consist out of a multiplication of the attentions between the parents and the children. This way a low parent attention already dooms the child
+        . Also the parent attention can be regularized to be equal to be similar to the avg attention of the children"""
         super().__init__()
         assert n_embd % n_head == 0
+        self.n_levels = n_levels
+        self.n_head = n_head
+        self.n_embd = n_embd
+        self.T_Threshold = T_Threshold
+        self.R = n_embd//n_levels
         # key, query, value projections for all heads, but in a batch
-        self.c_attn = nn.Linear(n_embd, 3 * n_embd)
+        self.c_attn = nn.Linear(self.R, 3 * self.R)
         # output projection
         self.c_proj = nn.Linear(n_embd, n_embd)
         # regularization
@@ -28,34 +35,10 @@ class TreeAttentionV2(nn.Module):
     def forward(self, x):
         B, N_PATCHES, N_LEVELS, R = x.size()
         
-        H = int(math.sqrt(N_PATCHES))
-        W = int(math.sqrt(N_PATCHES))
         
-        N_NODES = 0
-        for i in range(N_LEVELS):
-            N_NODES += 4**i
-        
-        x_nodes = torch.zeros(B, N_NODES, N_LEVELS, R)
-        
-        start_index = 0
-        for i in range(N_LEVELS):
-            h_num_sum = 2**i
-            w_num_sum = 2**i
-            
-            x_nodes[:, start_index:4**(N_LEVELS-i), i:, :] = x[:, :, i:, :]
-            x = x.view(B, H, W, N_LEVELS, R)
-            
-            for j in range(i):
-                x_avg = avg_siblings(x[:, :, :, j, :], sibling_order=i, h_num_sum=h_num_sum, w_num_sum=w_num_sum)
-                
-                x_nodes[:, start_index:4**(N_LEVELS-i), j, :] = 
-            
-            start_index = 4**i        
-        
-        q = torch.zeros(B, self.n_head, N_NODES, N_LEVELS * R/self.n_head)
-
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)
+        q, k ,v  = self.c_attn(x).split(self.R, dim=2) # (B, N_PATCHES, N_LEVELS, R) -> (B, N_PATCHES, N_LEVELS, R)
+        
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
