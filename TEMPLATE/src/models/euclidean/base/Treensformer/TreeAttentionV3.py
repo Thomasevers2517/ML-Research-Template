@@ -33,15 +33,16 @@ def build_node_id_map(H, W, n_levels):
     return node_id_map
 
 
-def unify_nodes(x, node_id_map):
+def unify_nodes(x, node_id_map, M):
     """
     x: (B, H, W, n_levels, R)
     node_id_map: (H, W, n_levels), same for entire batch
+    M: total unique nodes
+    
     - Each (h,w,lvl) that refers to the same physical node has the same ID.
 
     Returns:
       unique_nodes: (B, M, R) after averaging duplicates
-      M: number of distinct node IDs
     """
     B, H, W, L, R = x.shape
     device = x.device
@@ -51,7 +52,7 @@ def unify_nodes(x, node_id_map):
     x_flat = x.view(B, N, R)
 
     node_id_flat = node_id_map.view(N)
-    M = node_id_flat.max().item() + 1
+    
 
     sum_buffer = torch.zeros(B, M, R, device=device)
     count_buffer = torch.zeros(B, M, device=device)
@@ -68,7 +69,7 @@ def unify_nodes(x, node_id_map):
     # avoid /0
     count_buffer = torch.clamp(count_buffer, min=1e-6)
     unique_nodes = sum_buffer / count_buffer.unsqueeze(2)  # (B, M, R)
-    return unique_nodes, M
+    return unique_nodes
 
 
 def scatter_back(x, updated_nodes, node_id_map, M):

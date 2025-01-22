@@ -1,6 +1,6 @@
 TRAIN_CONFIG:
     TEST_RUN: False
-    MODEL: "ImageTreensformerV4"
+    MODEL: "ImageTreensformerV5"
     MODEL_PARAMS:
         NUM_LAYERS: 16
         EMBEDDING_SIZE: 256

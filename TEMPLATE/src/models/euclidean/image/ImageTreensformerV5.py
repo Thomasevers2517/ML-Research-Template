@@ -28,12 +28,12 @@ class ImageTreensformerV5(nn.Module):
         self.output_size = output_shape[0]  # e.g. number of classes
         self.patch_size = patch_size
         self.n_embd = embedding_size
-        self.num_levels = int(math.log2(self.H)) + 1
+        self.num_levels = int(math.log2(self.H/patch_size)) + 1
         self.inner_dim = self.n_embd // self.num_levels
 
         # a simple linear embedding
         self.flat_dim = patch_size*patch_size*self.C
-        self.embedding = nn.Linear(self.flat_dim*self.num_levels, self.n_embd)
+        self.embedding = nn.Linear(self.flat_dim, self.inner_dim)
         
         # Build transformer layers
         self.layers = nn.Sequential(
@@ -95,23 +95,19 @@ class ImageTreensformerV5(nn.Module):
 
         # build token tree => (B, bh, bw, n_levels, flat_dim)
         x_tree = self.build_token_tree(x)  # shape => (B, H, W, n_levels, flat_dim)
-
-        # now flatten the last dim => we want [flat_dim * n_levels] => we do it differently:
-        # Actually we do it in the embedding step:
         B_, H_, W_, L_, fd_ = x_tree.shape
-        x_tree_reshaped = x_tree.view(B_, H_, W_, L_*fd_)  # => (B,H,W, n_levels*flat_dim)
-        x_embed = self.embedding(x_tree_reshaped)  # => (B,H,W, n_embd)
-        
-        # reshape => (B,H,W,n_levels, n_embd//n_levels)
-        x_embed = x_embed.view(B_, H_, W_, self.num_levels, self.inner_dim)
+
+  
+        x_embed = self.embedding(x_tree)  # => (B,H,W, n_levels, self.inner_dim)
 
         # pass through layers
         out = self.layers(x_embed)  # => (B,H,W,n_levels,inner_dim)
 
         # for classification, maybe we pick the root node => out[:,:,:, -1, :]
-        # or do mean of level=0 => depends on your approach
         root_nodes = out[:, :, :, self.num_levels-1, :]  # shape (B,H,W,R)
         # average them => (B,R)
+        #it should all be the same, so we can just take the first one also
         root_avg = root_nodes.mean(dim=(1,2))
+        
         logits = self.mlp_cls(root_avg)
         return logits

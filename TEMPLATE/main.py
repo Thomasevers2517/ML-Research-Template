@@ -5,6 +5,7 @@ import src.models.euclidean.image.VIT as VIT
 import src.models.euclidean.image.ImageTreensformerV2 as ImageTreensformerV2
 import src.models.euclidean.image.ImageTreensformerV3 as ImageTreensformerV3
 import src.models.euclidean.image.ImageTreensformerV4 as ImageTreensformerV4
+import src.models.euclidean.image.ImageTreensformerV5 as ImageTreensformerV5
 import torch
 import wandb
 import yaml
@@ -116,6 +117,13 @@ if __name__ == '__main__':
                                                         num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
                                                         patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
                                                         T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
+                                                        ).to(device)
+    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV5':
+        model = ImageTreensformerV5.ImageTreensformerV5(input_shape=input_shape, output_shape=targets_shape,
+                                                        num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                                                        embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                                                        num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                                                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE']
                                                         ).to(device)
     
 
