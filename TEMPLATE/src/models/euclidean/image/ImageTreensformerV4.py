@@ -97,7 +97,7 @@ class ImageTreensformerV4(BaseModule):
         expanded_positional_embeddings = self.positional_embeddings.expand(B, self.N, self.n_levels, self.n_emb//self.n_levels)
         x = x + self.positional_embeddings
         x = self.treensformer(x)  
-        x = self.mlp_cls( torch.mean(x[:, :, 0, :], dim=1) ) # Average pooling of the root token of all tokens
+        x = self.mlp_cls( torch.mean(x[:, :, self.n_levels, :], dim=1) ) # Average pooling of the root token of all tokens
         return x
     
 

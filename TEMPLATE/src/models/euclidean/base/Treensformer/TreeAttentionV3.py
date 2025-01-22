@@ -1,76 +1,138 @@
+# tree_attention.py
+
+import math
 import torch
 import torch.nn as nn
-import math
 import torch.nn.functional as F
-from src.models.euclidean.base.Treensformer.avg_siblings import avg_siblings
-class TreeAttentionV3(nn.Module):
- 
 
-    def __init__(self, block_size, n_embd, n_head, attn_pdrop, resid_pdrop, T_Threshold=0, n_levels=4):
-        """ V3 takes only the lose embedding and not the parent embeddings. 
-        But the attention consist out of a multiplication of the attentions between the parents and the children. This way a low parent attention already dooms the child
-        . Also the parent attention can be regularized to be equal to be similar to the avg attention of the children"""
+def build_node_id_map(H, W, n_levels):
+    """
+    Creates a node_id_map of shape (H, W, n_levels) that assigns each
+    (h, w, level) a unique ID in [0..M-1], so that nodes repeated
+    (i.e. the same 'parent') share the same ID.
+
+    Example logic:
+      - For level=0, each patch is unique => node_id = h*W + w
+      - For higher levels, each 2^level block is one node
+      - For top level, everything is node_id=0 (the root).
+    Modify as needed for your actual duplication structure.
+    """
+    node_id_map = torch.zeros(H, W, n_levels, dtype=torch.long)
+    for lvl in range(n_levels):
+        block_size = 2 ** lvl
+        for h in range(H):
+            for w in range(W):
+                bh = h // block_size
+                bw = w // block_size
+                # flatten
+                node_id_map[h, w, lvl] = bh * (W // block_size) + bw
+
+        # if lvl == n_levels - 1 => unify entire top => ID=0
+        if lvl == n_levels - 1:
+            node_id_map[..., lvl] = 0
+    return node_id_map
+
+
+def unify_nodes(x, node_id_map):
+    """
+    x: (B, H, W, n_levels, R)
+    node_id_map: (H, W, n_levels), same for entire batch
+    - Each (h,w,lvl) that refers to the same physical node has the same ID.
+
+    Returns:
+      unique_nodes: (B, M, R) after averaging duplicates
+      M: number of distinct node IDs
+    """
+    B, H, W, L, R = x.shape
+    device = x.device
+
+    # Flatten (H,W,L) => N
+    N = H * W * L
+    x_flat = x.view(B, N, R)
+
+    node_id_flat = node_id_map.view(N)
+    M = node_id_flat.max().item() + 1
+
+    sum_buffer = torch.zeros(B, M, R, device=device)
+    count_buffer = torch.zeros(B, M, device=device)
+
+    # For each sample in the batch, we scatter_add
+    for b in range(B):
+        local_x = x_flat[b]             # (N, R)
+        idx_expanded = node_id_flat.unsqueeze(1).expand(N, R)  # (N, R)
+        sum_buffer[b] = sum_buffer[b].scatter_add(0, idx_expanded, local_x)
+
+        ones = torch.ones(N, device=device)
+        count_buffer[b] = count_buffer[b].scatter_add(0, node_id_flat, ones)
+
+    # avoid /0
+    count_buffer = torch.clamp(count_buffer, min=1e-6)
+    unique_nodes = sum_buffer / count_buffer.unsqueeze(2)  # (B, M, R)
+    return unique_nodes, M
+
+
+def scatter_back(x, updated_nodes, node_id_map, M):
+    """
+    x: (B, H, W, L, R) [only for shape references]
+    updated_nodes: (B, M, R)
+    node_id_map: (H, W, L)
+    M: total node IDs
+
+    Returns:
+      new_x => (B, H, W, L, R)
+        Each position picks updated_nodes[b, node_id_map[h,w,level], :]
+    """
+    B, H, W, L, R = x.shape
+    N = H * W * L
+    device = x.device
+
+    node_id_flat = node_id_map.view(N)
+    # We'll build new_x_flat => shape (B, N, R)
+    new_x_flat = torch.zeros_like(x.view(B, N, R))
+
+    for b in range(B):
+        # shape => (M, R)
+        local_up = updated_nodes[b]
+        # shape => (N,)
+        # gather each row from local_up[node_id_flat[n], :]
+        # We do a direct gather:
+        new_x_flat[b] = local_up[node_id_flat, :]
+
+    new_x = new_x_flat.view(B, H, W, L, R)
+    return new_x
+
+
+class SimpleMHA(nn.Module):
+    """
+    A minimal multi-head attention for shape (B, N, R) -> (B, N, R).
+    """
+    def __init__(self, embed_dim, num_heads, dropout=0.0):
         super().__init__()
-        assert n_embd % n_head == 0
-        self.n_levels = n_levels
-        self.n_head = n_head
-        self.n_embd = n_embd
-        self.T_Threshold = T_Threshold
-        self.R = n_embd//n_levels
-        # key, query, value projections for all heads, but in a batch
-        self.c_attn = nn.Linear(self.R, 3 * self.R)
-        # output projection
-        self.c_proj = nn.Linear(n_embd, n_embd)
-        # regularization
-        self.attn_dropout = nn.Dropout(attn_pdrop)
-        self.resid_dropout = nn.Dropout(resid_pdrop)
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        self.scale = self.head_dim ** -0.5
 
-        # just so that the attention map is logged
-        self.att_map = AttentionMap()
-        
-        self.n_head = n_head
-        self.n_embd = n_embd
-        self.T_Threshold = T_Threshold
+        self.q_proj = nn.Linear(embed_dim, embed_dim)
+        self.k_proj = nn.Linear(embed_dim, embed_dim)
+        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        B, N_PATCHES, N_LEVELS, R = x.size()
-        level_attention = torch.zeros(B, N_PATCHES, N_PATCHES)
-        for i in range(N_LEVELS, 0, -1):
-            # select a single sample of each parent at level i
-            x_temp =  x[:, :, i, :]
-            # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-            q, k ,v  = self.c_attn(x).split(self.R, dim=2) # (B, N_PATCHES, N_LEVELS, R) -> (B, N_PATCHES, N_LEVELS, R)
-            
-            
-            k = k.view(B, self.n_head, N_PATCHES, R // self.n_head).transpose(1, 2)
-            q = q.view(B, self.n_head, N_PATCHES, R // self.n_head).transpose(1, 2)
-            v = v.view(B, self.n_head, N_PATCHES, R // self.n_head).transpose(1, 2)
-            
-            # Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-            
-            
-            # att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-            att = F.softmax(att, dim=-1)
-            att = F.relu(att - self.T_Threshold)
-            att = self.att_map(att)
-            att = self.attn_dropout(att)
-            
-        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
-        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
+        # x: (B, N, R)
+        B, N, R = x.shape
+        assert R == self.embed_dim
 
-        # output projection
-        y = self.resid_dropout(self.c_proj(y))
-        y = y.view(B, N_PATCHES, N_LEVELS, R)
-        return y
+        q = self.q_proj(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)  # (B, nh, N, hd)
+        k = self.k_proj(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
 
-    
-class AttentionMap(nn.Module):
-    """
-    AttentionMap class
-    """
-    def __init__(self):
-        super().__init__()
+        attn = torch.matmul(q, k.transpose(-2, -1)) * self.scale  # (B, nh, N, N)
+        attn = F.softmax(attn, dim=-1)
+        attn = self.dropout(attn)
 
-    def forward(self, att):
-        return att
+        out = torch.matmul(attn, v)  # (B, nh, N, hd)
+        out = out.transpose(1, 2).contiguous().view(B, N, R)
+        out = self.out_proj(out)
+        return out
