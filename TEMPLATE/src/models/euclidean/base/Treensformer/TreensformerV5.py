@@ -85,9 +85,6 @@ class TreensformerBlockV5(nn.Module):
           (6) LN => tree_mlp
           (7) residual
         """
-        from src.models.euclidean.base.Treensformer.TreeAttentionV3 import (
-            build_node_id_map, unify_nodes, scatter_back
-        )  # or keep them at top
 
         B, H, W, L, R = x.shape
         assert L == self.n_levels, f"Expected n_levels={self.n_levels}, got L={L}"
@@ -107,19 +104,21 @@ class TreensformerBlockV5(nn.Module):
 
         # 3) attn => (B,M,R)
         attn_out = self.attn(unique_nodes, mask=self.att_mask)
+        
+        # 4) residual dropout 
+        attn_out = self.resid_pdrop(attn_out)
 
-        # 4) scatter => shape (B,H,W,L,R)
+        # 5) scatter => shape (B,H,W,L,R)
         x_attn = scatter_back(x_ln, attn_out, self.node_id_map, self.M)
 
-        # 5) residual sum w/ dropout
-        # x_res = x + self.resid_pdrop(x_attn)
+        # 6) residual sum
         x_res = x + x_attn
 
-        # 6) LN => TreeMLPV3 => shape (B,H,W,L,R)
+        # 7) LN => TreeMLPV3 => shape (B,H,W,L,R)
         x_ln2 = self.ln_2(x_res)
         mlp_out = self.tree_mlp(x_ln2)  # => (B,H,W,L,R)
 
-        # 7) final residual
+        # 8) final residual
         x_final = x_res + mlp_out
         return x_final
     
