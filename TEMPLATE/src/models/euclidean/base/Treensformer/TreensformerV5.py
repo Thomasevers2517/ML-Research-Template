@@ -171,15 +171,15 @@ def create_mask(node_id_map, M):
                                     level_siblings.add(sibling_id.item())
                     sibling_ids.append(level_siblings)
                 print(f"Node {node_id} has parents {parent_ids} and siblings {sibling_ids}")      
-                # NODE attents to PARENT
-                mask[node_id, parent_ids[0]] = True
+                # # NODE attents to PARENT
+                # mask[node_id, parent_ids[0]] = True
                 
                 # PARENT attents to NODE
                 mask[parent_ids[0], node_id] = True
                 
-                #NODE attends to ALL PARENT
-                for parent in parent_ids:
-                    mask[node_id, parent] = True
+                # #NODE attends to ALL PARENT
+                # for parent in parent_ids:
+                #     mask[node_id, parent] = True
                 
                 # ALL PARENTS attend to NODE    
                 for parent in parent_ids:
@@ -187,15 +187,15 @@ def create_mask(node_id_map, M):
                 
                     
 
-                # NODE attends to direct siblings
+                # NODE attends to direct SIBLINGS
                 for sibling in sibling_ids[0]:
                     mask[node_id, sibling] = True
                     
-                # SIBLINGS attend to NODE
+                # DIRECT SIBLINGS attend to NODE
                 for sibling in sibling_ids[0]:
                     mask[sibling, node_id] = True
                     
-                # NODE attends to siblings of any order (as in cousins and such)
+                # NODE attends to SIBLINGS of any order (as in cousins and such)
                 for level_siblings in sibling_ids:
                     for sibling in level_siblings:
                         mask[node_id, sibling] = True
