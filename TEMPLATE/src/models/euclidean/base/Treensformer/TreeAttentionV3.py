@@ -72,32 +72,6 @@ def unify_nodes(x, node_id_map, M):
     return unique_nodes
 
 
-# def scatter_back(x, updated_nodes, node_id_map, M):
-#     """
-#     x: (B, H, W, L, R) [only for shape references]
-#     updated_nodes: (B, M, R)
-#     node_id_map: (H, W, L)
-#     M: total node IDs
-
-#     Returns:
-#       new_x => (B, H, W, L, R)
-#         Each position picks updated_nodes[b, node_id_map[h,w,level], :]
-#     """
-#     B, H, W, L, R = x.shape
-#     N = H * W * L
-#     device = x.device
-
-#     node_id_flat = node_id_map.view(N)
-#     # We'll build new_x_flat => shape (B, N, R)
-#     new_x_flat = torch.zeros_like(x.view(B, N, R))
-
-#     for i in range(N):
-#         # For each node, we pick the updated node
-#         new_x_flat[:, i, :] = updated_nodes[:, node_id_flat[i], :]
-    
-#     new_x = new_x_flat.view(B, H, W, L, R)
-#     return new_x
-
 def scatter_back(x, updated_nodes, node_id_map, M):
     """
     x: (B, H, W, L, R) [only for shape references]

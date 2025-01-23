@@ -9,14 +9,14 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["ImageTreensformerV5", "VIT"]
+    values: ["ImageTreensformerV5"]
       
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
         values: [16, 8]
       EMBEDDING_SIZE:
-        values: [256]
+        values: [512, 256]
       NUM_HEADS:
         values: [4]
       PATCH_SIZE: 
