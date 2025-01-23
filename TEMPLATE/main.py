@@ -123,7 +123,9 @@ if __name__ == '__main__':
                                                         num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
                                                         embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
                                                         num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
-                                                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE']
+                                                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                                                        mask=TRAIN_CONFIG['MODEL_PARAMS']['MASK'],
+                                                        mlp= TRAIN_CONFIG['MODEL_PARAMS']['MLP'],
                                                         ).to(device)
     
 

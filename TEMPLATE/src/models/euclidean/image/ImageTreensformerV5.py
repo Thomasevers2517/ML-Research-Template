@@ -20,7 +20,9 @@ class ImageTreensformerV5(nn.Module):
         embedding_size,
         num_heads,
         patch_size,
-        dropout=0.4
+        dropout=0.4,
+        mask=None,
+        mlp = {"HIDDEN_MULTIPLIER": 4, "DROPOUT": 0.3},
     ):
         super().__init__()
         # Basic
@@ -55,7 +57,9 @@ class ImageTreensformerV5(nn.Module):
                     num_heads=num_heads,
                     n_levels=self.num_levels,
                     attn_pdrop=dropout,
-                    resid_pdrop=dropout
+                    resid_pdrop=dropout,
+                    mask=mask,
+                    mlp=mlp,
                 )
                 for _ in range(num_layers)
             ]

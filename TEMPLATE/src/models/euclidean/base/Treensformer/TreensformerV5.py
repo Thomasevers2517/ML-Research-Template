@@ -39,7 +39,9 @@ class TreensformerBlockV5(nn.Module):
         num_heads: int,  # number of attention heads
         n_levels: int,   # number of hierarchical levels
         attn_pdrop: float = 0.4,
-        resid_pdrop: float = 0.4
+        resid_pdrop: float = 0.4,
+        mask =None,
+        mlp = None,
     ):
         super().__init__()
         print("Building TreensformerBlock V5")
@@ -64,7 +66,7 @@ class TreensformerBlockV5(nn.Module):
         self.resid_pdrop = nn.Dropout(resid_pdrop)
 
         # Use TreeMLPV3 for the second part
-        self.tree_mlp = TreeMLPV3(n_embd, n_levels)
+        self.tree_mlp = TreeMLPV3(n_embd, n_levels, mlp_multiplier=mlp["HIDDEN_MULTIPLIER"])
         
         self.M = 0  # 
         for i in range(n_levels):
@@ -74,7 +76,10 @@ class TreensformerBlockV5(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.node_id_map = build_node_id_map(H, W, self.n_levels).to(device=device)
-        self.register_buffer("att_mask", create_mask(self.node_id_map, self.M))
+        
+        self.register_buffer("att_mask", create_mask(self.node_id_map, self.M, mask_dict=mask))
+        
+        
 
     def forward(self, x):
         """
@@ -103,9 +108,6 @@ class TreensformerBlockV5(nn.Module):
 
         # 3) attn => (B,M,R)
         attn_out = self.attn(unique_nodes, mask=self.att_mask)
-        
-        # 4) residual dropout 
-        attn_out = self.resid_pdrop(attn_out)
 
         # 5) scatter => shape (B,H,W,L,R)
         x_attn = scatter_back(x_ln, attn_out, self.node_id_map, self.M)
@@ -118,27 +120,16 @@ class TreensformerBlockV5(nn.Module):
         mlp_out = self.tree_mlp(x_ln2)  # => (B,H,W,L,R)
 
         # 8) final residual
-        x_final = x_res + mlp_out
+        x_final = x_res + self.resid_pdrop(mlp_out)
         return x_final
     
-def create_mask(node_id_map, M):
+def create_mask(node_id_map, M, mask_dict=None):
     """
-    node_id_map: (H, W, L) => int nodeID in [0..M-1].
-    M: total # of unique nodes.
-
-    Returns:
-      mask: (M, M) bool or float. 
-        mask[i,j] = True => node i attends to node j.
+    Create a mask for the attention mechanism.
+    The mask is a (M, M) matrix where M is the total number of nodes in the tree.
+    The mask is a boolean matrix where mask[i, j] = True means that node i can attend to node j.
+    """
     
-    We'll identify:
-      1) child->parent connections
-      2) parent->child connections
-      3) siblings
-      4) grandparents, grandchildren if wanted
-      ...
-    We'll let lines be easily commentable so you can remove certain edges.
-    """
-
     # We'll build a list of coords for each node ID
     # node_positions[i] = list of (h,w,ell)
     H, W, L = node_id_map.shape
@@ -168,36 +159,31 @@ def create_mask(node_id_map, M):
                                 if sibling_id.item() != node_id:
                                     level_siblings.add(sibling_id.item())
                     sibling_ids.append(level_siblings)
-                print(f"Node {node_id} has parents {parent_ids} and siblings {sibling_ids}")      
-                # # NODE attents to PARENT
-                # mask[node_id, parent_ids[0]] = True
                 
-                # PARENT attents to NODE
-                mask[parent_ids[0], node_id] = True
-                
-                # #NODE attends to ALL PARENT
-                # for parent in parent_ids:
-                #     mask[node_id, parent] = True
-                
-                # ALL PARENTS attend to NODE    
-                for parent in parent_ids:
-                    mask[parent, node_id] = True
-                
+                if mask_dict["CHILD_PARENT"]:
+                    # NODE attents to PARENT
+                    mask[node_id, parent_ids[0]] = True
                     
-
-                # NODE attends to direct SIBLINGS
-                for sibling in sibling_ids[0]:
-                    mask[node_id, sibling] = True
-                    
-                # DIRECT SIBLINGS attend to NODE
-                for sibling in sibling_ids[0]:
-                    mask[sibling, node_id] = True
-                    
-                # NODE attends to SIBLINGS of any order (as in cousins and such)
-                for level_siblings in sibling_ids:
-                    for sibling in level_siblings:
+                if mask_dict["PARENT_CHILD"]:
+                    # PARENT attents to NODE
+                    mask[parent_ids[0], node_id] = True
+                
+                if mask_dict["GRANDPARENT_GRANDCHILD"]:
+                    for parent in parent_ids:
+                        mask[node_id, parent] = True
+                if mask_dict["GRANDCHILD_GRANDPARENT"]:
+                    # ALL PARENTS attend to NODE    
+                    for parent in parent_ids:
+                        mask[parent, node_id] = True
+                if mask_dict["SIBLINGS"]:
+                    # NODE attends to direct SIBLINGS
+                    for sibling in sibling_ids[0]:
                         mask[node_id, sibling] = True
-    print(mask)
+                if mask_dict["COUSINS"]:
+                    # NODE attends to SIBLINGS of any order (as in cousins and such)
+                    for level_siblings in sibling_ids:
+                        for sibling in level_siblings:
+                            mask[node_id, sibling] = True
     return mask
                 
                 

@@ -18,7 +18,7 @@ parameters:
       EMBEDDING_SIZE:
         values: [256, 512]
       NUM_HEADS:
-        values: [2, 4]
+        values: [4]
       PATCH_SIZE: 
         values: [4]
       T_THRESHOLD:
@@ -29,6 +29,22 @@ parameters:
         values: [0]
       MASK:
         parameters:
+          PARENT_CHILD:
+            values: [True]
+          CHILD_PARENT:
+            values: [False]
+          SIBLING:
+            values: [True]
+          COUSIN:
+            values: [True, False]
+          GRANDPARENT_GRANDCHILD:
+            values: [True, False]
+          GRANDCHILD_GRANDPARENT:
+            values: [False]
+      MLP:
+        parameters:
+          HIDDEN_MULTIPLIER:
+            values: [2, 4, 8]
         
 
 

@@ -7,16 +7,16 @@ from src.models.euclidean.base.Treensformer.avg_siblings import avg_siblings
 
 
 class TreeMLPV3(nn.Module):
-    def __init__(self, n_embd, n_levels):
+    def __init__(self, n_embd, n_levels, mlp_hidden_multiplier=4):
         super().__init__()
         self.n_embd = n_embd
         self.n_levels = n_levels
         # MLP: in_features = n_embd, out_features = n_embd//n_levels
         # Because each 'level' embedding has dimension R = (n_embd // n_levels)
         self.mlp = nn.Sequential(
-            nn.Linear(n_embd, (n_embd // n_levels) * 4),
+            nn.Linear(n_embd, (n_embd // n_levels) * mlp_hidden_multiplier),
             NewGELU(),
-            nn.Linear((n_embd // n_levels) * 4, n_embd // n_levels),
+            nn.Linear((n_embd // n_levels) * mlp_hidden_multiplier, n_embd // n_levels),
         )
 
     def forward(self, x):
