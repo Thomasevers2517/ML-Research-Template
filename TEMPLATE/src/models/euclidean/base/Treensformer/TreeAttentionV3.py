@@ -72,6 +72,32 @@ def unify_nodes(x, node_id_map, M):
     return unique_nodes
 
 
+# def scatter_back(x, updated_nodes, node_id_map, M):
+#     """
+#     x: (B, H, W, L, R) [only for shape references]
+#     updated_nodes: (B, M, R)
+#     node_id_map: (H, W, L)
+#     M: total node IDs
+
+#     Returns:
+#       new_x => (B, H, W, L, R)
+#         Each position picks updated_nodes[b, node_id_map[h,w,level], :]
+#     """
+#     B, H, W, L, R = x.shape
+#     N = H * W * L
+#     device = x.device
+
+#     node_id_flat = node_id_map.view(N)
+#     # We'll build new_x_flat => shape (B, N, R)
+#     new_x_flat = torch.zeros_like(x.view(B, N, R))
+
+#     for i in range(N):
+#         # For each node, we pick the updated node
+#         new_x_flat[:, i, :] = updated_nodes[:, node_id_flat[i], :]
+    
+#     new_x = new_x_flat.view(B, H, W, L, R)
+#     return new_x
+
 def scatter_back(x, updated_nodes, node_id_map, M):
     """
     x: (B, H, W, L, R) [only for shape references]
@@ -84,19 +110,21 @@ def scatter_back(x, updated_nodes, node_id_map, M):
         Each position picks updated_nodes[b, node_id_map[h,w,level], :]
     """
     B, H, W, L, R = x.shape
-    N = H * W * L
-    device = x.device
 
-    node_id_flat = node_id_map.view(N)
-    # We'll build new_x_flat => shape (B, N, R)
-    new_x_flat = torch.zeros_like(x.view(B, N, R))
+    # Flatten node_id_map to (H * W * L,)
+    node_id_flat = node_id_map.view(-1)  # Shape: (H * W * L)
 
-    for i in range(N):
-        # For each node, we pick the updated node
-        new_x_flat[:, i, :] = updated_nodes[:, node_id_flat[i], :]
-    
+    # Repeat `node_id_flat` for each batch => shape (B, H * W * L)
+    node_id_broadcast = node_id_flat.unsqueeze(0).expand(B, -1)
+
+    # Gather from updated_nodes => shape (B, H * W * L, R)
+    new_x_flat = torch.gather(updated_nodes, 1, node_id_broadcast.unsqueeze(-1).expand(-1, -1, R))
+
+    # Reshape back to (B, H, W, L, R)
     new_x = new_x_flat.view(B, H, W, L, R)
+
     return new_x
+
 
 
 class SimpleMHA(nn.Module):
