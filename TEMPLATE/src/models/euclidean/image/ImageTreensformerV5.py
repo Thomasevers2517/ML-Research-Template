@@ -1,15 +1,15 @@
-
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
-import numpy as np
+
 from src.models.euclidean.base.Treensformer.TreensformerV5 import TreensformerBlockV5
 
 class ImageTreensformerV5(nn.Module):
     """
     End-to-end: extracts patches, builds hierarchical tokens,
-    then runs multiple TreensformerBlockV4 layers, finally does classification.
+    applies multiple TreensformerBlockV5 layers, then does classification.
+    Includes positional embeddings of shape (1,bh,bw,n_levels,inner_dim).
     """
 
     def __init__(
@@ -28,13 +28,21 @@ class ImageTreensformerV5(nn.Module):
         self.output_size = output_shape[0]  # e.g. number of classes
         self.patch_size = patch_size
         self.n_embd = embedding_size
+
+        # Number of levels = log2(H/patch_size) + 1 if you want the full hierarchy
         self.num_levels = int(math.log2(self.H/patch_size)) + 1
         self.inner_dim = self.n_embd // self.num_levels
 
-        # a simple linear embedding
-        self.flat_dim = patch_size*patch_size*self.C
+        # A simple linear embedding for each patch-level cell
+        self.flat_dim = patch_size * patch_size * self.C
         self.embedding = nn.Linear(self.flat_dim, self.inner_dim)
-        
+
+        # We'll define pos_embed of shape (1, bh, bw, n_levels, inner_dim).
+        # where bh = H//patch_size, bw = W//patch_size
+        bh = self.H // self.patch_size
+        bw = self.W // self.patch_size
+        self.pos_embed = nn.Parameter(torch.zeros(1, bh, bw, self.num_levels, self.inner_dim))
+
         # Build transformer layers
         self.layers = nn.Sequential(
             *[
@@ -48,66 +56,66 @@ class ImageTreensformerV5(nn.Module):
                 for _ in range(num_layers)
             ]
         )
-        # classification head
+        # Classification head
         self.mlp_cls = nn.Linear(self.inner_dim, self.output_size)
 
     def build_token_tree(self, x):
         """
-        Convert from (B,H,W,flat_dim) to (B,H,W,n_levels,flat_dim).
+        Convert from (B, h, w, flat_dim) to (B, h, w, n_levels, flat_dim).
         We'll do a top-down approach, storing each level by averaging sub-blocks.
         """
-        B, H_, W_, fd = x.shape
-        # in your code you do log2, etc.
-        # We'll replicate that approach:
-        # For each level L, block size = 2^L
-        # This is the same logic you used in your 'build_token_tree' snippet
-        n_levels = int(math.log2(H_)) + 1
-        x_tree = torch.zeros(B, H_, W_, n_levels, fd, device=x.device)
+        B, h, w, fd = x.shape
+        n_levels = int(math.log2(h)) + 1
+
+        x_tree = torch.zeros(B, h, w, n_levels, fd, device=x.device, dtype=x.dtype)
         for level in range(n_levels):
             block_size = 2**level
-            for i in range(H_):
-                for j in range(W_):
-                    local_i = (i//block_size)*block_size
-                    local_j = (j//block_size)*block_size
+            for i in range(h):
+                for j in range(w):
+                    bi = (i // block_size) * block_size
+                    bj = (j // block_size) * block_size
                     # average sub-block
-                    x_tree[:, i, j, level, :] = x[:, local_i:local_i+block_size,
-                                                     local_j:local_j+block_size, :].mean(dim=(1,2))
+                    x_tree[:, i, j, level, :] = x[:, bi:bi+block_size, bj:bj+block_size, :].mean(dim=(1,2))
         return x_tree
 
     def forward(self, x):
         """
         x shape => (B, C, H, W).
-        1) extract patches
-        2) build token tree
-        3) embed + run layers
-        4) classify
+        1) extract patches => (B,h,w, flat_dim)
+        2) build token tree => (B,h,w,n_levels, flat_dim)
+        3) embed => (B,h,w,n_levels, inner_dim)
+        4) add pos_embed => (B,h,w,n_levels, inner_dim)
+        5) pass through TreensformerBlockV5 layers
+        6) root node => classification
         """
         B, C, H, W = x.shape
-        # basic patch extraction
+        # 1) Patch extraction
         x = x.unfold(2, self.patch_size, self.patch_size)
         x = x.unfold(3, self.patch_size, self.patch_size)
-        # => (B, C, H//patch_size, W//patch_size, patch_size, patch_size)
+        # => shape (B, C, h, w, patch_size, patch_size)
         x = x.permute(0, 2, 3, 1, 4, 5).contiguous()  
-        # => (B, h, w, C, p, p)
-        # flatten
+        # => (B, h, w, C, patch_size, patch_size)
         bh, bw = x.shape[1], x.shape[2]
-        x = x.view(B, bh, bw, C*self.patch_size*self.patch_size)
+        x = x.view(B, bh, bw, C * (self.patch_size**2))
 
-        # build token tree => (B, bh, bw, n_levels, flat_dim)
-        x_tree = self.build_token_tree(x)  # shape => (B, H, W, n_levels, flat_dim)
-        B_, H_, W_, L_, fd_ = x_tree.shape
+        # 2) Build token tree => shape (B,bh,bw,n_levels,flat_dim)
+        x_tree = self.build_token_tree(x)
 
-  
-        x_embed = self.embedding(x_tree)  # => (B,H,W, n_levels, self.inner_dim)
+        # 3) Embedding => shape (B,bh,bw,n_levels,inner_dim)
+        B_, h_, w_, L_, fd_ = x_tree.shape
+        x_embed = self.embedding(x_tree)
 
-        # pass through layers
-        out = self.layers(x_embed)  # => (B,H,W,n_levels,inner_dim)
+        # 4) Add positional embeddings => must match shape (1, h_, w_, L_, self.inner_dim)
+        # expand along batch dimension
+        pos_broadcast = self.pos_embed[:, :, :, :, :].expand(B_, -1, -1, -1, -1)
+        x_embed = x_embed + pos_broadcast
 
-        # for classification, maybe we pick the root node => out[:,:,:, -1, :]
-        root_nodes = out[:, :, :, self.num_levels-1, :]  # shape (B,H,W,R)
-        # average them => (B,R)
-        #it should all be the same, so we can just take the first one also
-        root_avg = root_nodes.mean(dim=(1,2))
-        
+        # 5) Pass through layers => (B,h_,w_,L_,inner_dim)
+        out = self.layers(x_embed)
+
+        # 6) root node => out[:,:,:,L_-1,:], average => (B,inner_dim)
+        root_nodes = out[:, :, :, L_-1, :]  # => (B,h_,w_,inner_dim)
+        root_avg = root_nodes.mean(dim=(1,2))  # => (B,inner_dim)
+
         logits = self.mlp_cls(root_avg)
         return logits

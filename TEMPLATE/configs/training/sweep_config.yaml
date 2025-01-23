@@ -1,7 +1,7 @@
 
 
 program: TEMPLATE/main.py
-method: random
+method: grid
 metric:
   name: validation_loss
   goal: minimize
@@ -9,16 +9,16 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["ImageTreensformerV5"]
+    values: ["ImageTreensformerV5", "VIT"]
       
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [16]
+        values: [16, 8]
       EMBEDDING_SIZE:
-        values: [196, 256]
+        values: [256]
       NUM_HEADS:
-        values: [1]
+        values: [4]
       PATCH_SIZE: 
         values: [4]
       T_THRESHOLD:
@@ -36,7 +36,7 @@ parameters:
       LR:
         values: [0.0002]
       NUM_EPOCHS:
-        values: [80]
+        values: [120]
       LR_SCHEDULER:
         values: ["CosineAnnealingLR"]
 
@@ -64,7 +64,7 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [512]
+        values: [128]
       NUM_WORKERS:
         values: [32]
       AUGMENTATION:
