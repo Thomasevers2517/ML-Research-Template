@@ -69,6 +69,8 @@ class TreensformerBlockV5(nn.Module):
         self.M = 0  # 
         for i in range(n_levels):
             self.M += 4**i
+            
+        self.att_mask = None
 
     def forward(self, x):
         """
@@ -100,9 +102,11 @@ class TreensformerBlockV5(nn.Module):
 
         # 2) unify => (B,M,R)
         unique_nodes = unify_nodes(x_ln, self.node_id_map, self.M)
+        if self.att_mask is None:
+            self.att_mask = create_mask(self.node_id_map, self.M)
 
         # 3) attn => (B,M,R)
-        attn_out = self.attn(unique_nodes)
+        attn_out = self.attn(unique_nodes, mask=self.att_mask)
 
         # 4) scatter => shape (B,H,W,L,R)
         x_attn = scatter_back(x_ln, attn_out, self.node_id_map, self.M)
@@ -118,3 +122,102 @@ class TreensformerBlockV5(nn.Module):
         # 7) final residual
         x_final = x_res + mlp_out
         return x_final
+    
+def create_mask(node_id_map, M):
+    """
+    node_id_map: (H, W, L) => int nodeID in [0..M-1].
+    M: total # of unique nodes.
+
+    Returns:
+      mask: (M, M) bool or float. 
+        mask[i,j] = True => node i attends to node j.
+    
+    We'll identify:
+      1) child->parent connections
+      2) parent->child connections
+      3) siblings
+      4) grandparents, grandchildren if wanted
+      ...
+    We'll let lines be easily commentable so you can remove certain edges.
+    """
+
+    # We'll build a list of coords for each node ID
+    # node_positions[i] = list of (h,w,ell)
+    H, W, L = node_id_map.shape
+    device = node_id_map.device
+    mask = torch.zeros(M, M, dtype=torch.bool, device=device)
+    
+    for w in range(W):  
+        for h in range(H):
+            for ell in range(L):
+                # mask[receivers(q), senders(k)]
+
+                node_id = node_id_map[h,w,ell].item()
+                if ell == L-1:
+                    continue
+                
+                parent_ids = [None] * ((L-1) - ell)
+                for i in range((L-1)-ell):
+                    parent_ids[i] = node_id_map[h, w, ell+1+i].item()
+                    
+                sibling_ids = []
+                for i, parent in enumerate(parent_ids):
+                    level_siblings = set()
+                    for w_ in range(W):
+                        for h_ in range(H):
+                            if node_id_map[h_, w_, ell+1+i].item() == parent:
+                                sibling_id = node_id_map[h_, w_, ell]
+                                if sibling_id.item() != node_id:
+                                    level_siblings.add(sibling_id.item())
+                    sibling_ids.append(level_siblings)
+                print(f"Node {node_id} has parents {parent_ids} and siblings {sibling_ids}")      
+                # NODE attents to PARENT
+                mask[node_id, parent_ids[0]] = True
+                
+                # PARENT attents to NODE
+                mask[parent_ids[0], node_id] = True
+                
+                #NODE attends to ALL PARENT
+                for parent in parent_ids:
+                    mask[node_id, parent] = True
+                
+                # ALL PARENTS attend to NODE    
+                for parent in parent_ids:
+                    mask[parent, node_id] = True
+                
+                    
+
+                # NODE attends to direct siblings
+                for sibling in sibling_ids[0]:
+                    mask[node_id, sibling] = True
+                    
+                # SIBLINGS attend to NODE
+                for sibling in sibling_ids[0]:
+                    mask[sibling, node_id] = True
+                    
+                # NODE attends to siblings of any order (as in cousins and such)
+                for level_siblings in sibling_ids:
+                    for sibling in level_siblings:
+                        mask[node_id, sibling] = True
+    print(mask)
+    return mask
+                
+                
+                
+                            
+                    
+                    
+
+                
+                
+                
+                
+            
+                
+            # # GRANDPARENT or further, if you want to comment it out easily
+            
+
+            # # SIBLINGS
+            
+
+    return mask

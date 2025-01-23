@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+    
+
 def build_node_id_map(H, W, n_levels):
     """
     Creates a node_id_map of shape (H, W, n_levels) that assigns each
@@ -177,16 +179,23 @@ class SimpleMHA(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         # x: (B, N, R)
         B, N, R = x.shape
         assert R == self.embed_dim
+        
+        if mask is not None:
+            self.mask = mask
+        
 
         q = self.q_proj(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)  # (B, nh, N, hd)
         k = self.k_proj(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
         v = self.v_proj(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
 
         attn = torch.matmul(q, k.transpose(-2, -1)) * self.scale  # (B, nh, N, N)
+        if mask is not None:
+            attn = attn.masked_fill(mask == 0, float('-inf'))
+            
         attn = F.softmax(attn, dim=-1)
         attn = self.dropout(attn)
 
