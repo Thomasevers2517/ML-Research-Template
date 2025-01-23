@@ -32,16 +32,18 @@ class ImageTreensformerV5(nn.Module):
         # Number of levels = log2(H/patch_size) + 1 if you want the full hierarchy
         self.num_levels = int(math.log2(self.H/patch_size)) + 1
         self.inner_dim = self.n_embd // self.num_levels
+        
+        # We'll define pos_embed of shape (1, bh, bw, n_levels, self.flat_dim).
+        # where bh = H//patch_size, bw = W//patch_size
+        bh = self.H // self.patch_size
+        bw = self.W // self.patch_size
+        self.pos_embed = nn.Parameter(torch.zeros(1, bh, bw, self.flat_dim))
 
         # A simple linear embedding for each patch-level cell
         self.flat_dim = patch_size * patch_size * self.C
         self.embedding = nn.Linear(self.flat_dim, self.inner_dim)
 
-        # We'll define pos_embed of shape (1, bh, bw, n_levels, inner_dim).
-        # where bh = H//patch_size, bw = W//patch_size
-        bh = self.H // self.patch_size
-        bw = self.W // self.patch_size
-        self.pos_embed = nn.Parameter(torch.zeros(1, bh, bw, self.num_levels, self.inner_dim))
+
 
         # Build transformer layers
         self.layers = nn.Sequential(
@@ -97,18 +99,18 @@ class ImageTreensformerV5(nn.Module):
         # => (B, h, w, C, patch_size, patch_size)
         bh, bw = x.shape[1], x.shape[2]
         x = x.view(B, bh, bw, C * (self.patch_size**2))
+        
+        # 2) Add positional embeddings => 
+        # expand along batch dimension
+        pos_broadcast = self.pos_embed[:, :, :, :].expand(B_,  -1, -1, -1)
+        x = x + pos_broadcast
 
-        # 2) Build token tree => shape (B,bh,bw,n_levels,flat_dim)
+        # 3) Build token tree => shape (B,bh,bw,n_levels,flat_dim)
         x_tree = self.build_token_tree(x)
 
-        # 3) Embedding => shape (B,bh,bw,n_levels,inner_dim)
+        # 4) Embedding => shape (B,bh,bw,n_levels,inner_dim)
         B_, h_, w_, L_, fd_ = x_tree.shape
         x_embed = self.embedding(x_tree)
-
-        # 4) Add positional embeddings => must match shape (1, h_, w_, L_, self.inner_dim)
-        # expand along batch dimension
-        pos_broadcast = self.pos_embed[:, :, :, :, :].expand(B_, -1, -1, -1, -1)
-        x_embed = x_embed + pos_broadcast
 
         # 5) Pass through layers => (B,h_,w_,L_,inner_dim)
         out = self.layers(x_embed)
