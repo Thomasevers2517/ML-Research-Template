@@ -70,7 +70,11 @@ class TreensformerBlockV5(nn.Module):
         for i in range(n_levels):
             self.M += 4**i
             
-        self.att_mask = None
+        H, W = 8, 8 # Hardcoded for now
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.node_id_map = build_node_id_map(H, W, self.n_levels).to(device=device)
+        self.register_buffer("att_mask", create_mask(self.node_id_map, self.M))
 
     def forward(self, x):
         """
@@ -90,17 +94,12 @@ class TreensformerBlockV5(nn.Module):
         assert L == self.n_levels, f"Expected n_levels={self.n_levels}, got L={L}"
         assert R == self.inner_dim, f"Expected R={self.inner_dim}, got {R}"
 
-        # If no node_id_map built yet, do so. Then store for reuse
-        if self.node_id_map is None:
-            self.node_id_map = build_node_id_map(H, W, L).to(x.device)
-
         # 1) LN
         x_ln = self.ln_1(x)  # (B,H,W,L,R)
 
         # 2) unify => (B,M,R)
         unique_nodes = unify_nodes(x_ln, self.node_id_map, self.M)
-        if self.att_mask is None:
-            self.att_mask = create_mask(self.node_id_map, self.M)
+
 
         # 3) attn => (B,M,R)
         attn_out = self.attn(unique_nodes, mask=self.att_mask)

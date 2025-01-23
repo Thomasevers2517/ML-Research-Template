@@ -14,7 +14,7 @@ parameters:
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [16]
+        values: [8, 16]
       EMBEDDING_SIZE:
         values: [256, 512]
       NUM_HEADS:
@@ -27,6 +27,10 @@ parameters:
         values: [1]
       H_REG:
         values: [0]
+      MASK:
+        parameters:
+        
+
 
   OPTIMIZER: 
       values: ["AdamW"]
