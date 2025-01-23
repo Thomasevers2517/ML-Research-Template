@@ -15,7 +15,7 @@ def build_node_id_map(H, W, n_levels):
       - For level=0, each patch is unique => node_id = h*W + w
       - For higher levels, each 2^level block is one node
       - For top level, everything is node_id=0 (the root).
-    Modify as needed for your actual duplication structure.
+    Modify as needed for your actual duplication structure. 
     """
     node_id_map = torch.zeros(H, W, n_levels, dtype=torch.long)
     for lvl in range(n_levels):
@@ -25,11 +25,11 @@ def build_node_id_map(H, W, n_levels):
                 bh = h // block_size
                 bw = w // block_size
                 # flatten
-                node_id_map[h, w, lvl] = bh * (W // block_size) + bw
+                if lvl == 0:
+                    node_id_map[h, w, lvl] = bh * (H // block_size) + bw 
+                else:
+                    node_id_map[h, w, lvl] = bh * (H // block_size) + bw  + node_id_map[-1,-1,lvl-1] + 1
 
-        # if lvl == n_levels - 1 => unify entire top => ID=0
-        if lvl == n_levels - 1:
-            node_id_map[..., lvl] = 0
     return node_id_map
 
 
@@ -91,14 +91,10 @@ def scatter_back(x, updated_nodes, node_id_map, M):
     # We'll build new_x_flat => shape (B, N, R)
     new_x_flat = torch.zeros_like(x.view(B, N, R))
 
-    for b in range(B):
-        # shape => (M, R)
-        local_up = updated_nodes[b]
-        # shape => (N,)
-        # gather each row from local_up[node_id_flat[n], :]
-        # We do a direct gather:
-        new_x_flat[b] = local_up[node_id_flat, :]
-
+    for i in range(N):
+        # For each node, we pick the updated node
+        new_x_flat[:, i, :] = updated_nodes[:, node_id_flat[i], :]
+    
     new_x = new_x_flat.view(B, H, W, L, R)
     return new_x
 

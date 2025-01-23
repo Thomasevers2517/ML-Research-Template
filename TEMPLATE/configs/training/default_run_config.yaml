@@ -1,18 +1,18 @@
 TRAIN_CONFIG:
-    TEST_RUN: False
+    TEST_RUN: True
     MODEL: "ImageTreensformerV5"
     MODEL_PARAMS:
-        NUM_LAYERS: 16
-        EMBEDDING_SIZE: 256
+        NUM_LAYERS: 2
+        EMBEDDING_SIZE: 9
         NUM_HEADS: 1
-        PATCH_SIZE: 4
+        PATCH_SIZE: 8
         T_THRESHOLD: 0
         NUM_CLS: 1
         H_REG: 0
     OPTIMIZER: "AdamW"
     OPTIMIZER_PARAMS:
-        LR: 0.0006
-        NUM_EPOCHS: 80
+        LR: 0.002
+        NUM_EPOCHS: 4
         LR_SCHEDULER: "None"
     LOSS_FN: "CrossEntropyLoss"
     TRAINER: "BaseTrainer"
@@ -24,7 +24,7 @@ TRAIN_CONFIG:
     DATA_LOADER_PARAMS:
         DATASET_NAME: "CIFAR100" # Options: ["ImageNet", "CIFAR10", "CIFAR100", "MNIST", "FashionMNIST"]
         DATA_DIR: "data"
-        BATCH_SIZE: 128
+        BATCH_SIZE: 1
         NUM_WORKERS: 4
         AUGMENTATION: True
     WANDB_LOGGING_PARAMS:

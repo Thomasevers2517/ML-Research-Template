@@ -33,6 +33,9 @@ class ImageTreensformerV5(nn.Module):
         self.num_levels = int(math.log2(self.H/patch_size)) + 1
         self.inner_dim = self.n_embd // self.num_levels
         
+        
+        self.flat_dim = patch_size * patch_size * self.C
+                
         # We'll define pos_embed of shape (1, bh, bw, n_levels, self.flat_dim).
         # where bh = H//patch_size, bw = W//patch_size
         bh = self.H // self.patch_size
@@ -40,7 +43,6 @@ class ImageTreensformerV5(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, bh, bw, self.flat_dim))
 
         # A simple linear embedding for each patch-level cell
-        self.flat_dim = patch_size * patch_size * self.C
         self.embedding = nn.Linear(self.flat_dim, self.inner_dim)
 
 
@@ -102,7 +104,7 @@ class ImageTreensformerV5(nn.Module):
         
         # 2) Add positional embeddings => 
         # expand along batch dimension
-        pos_broadcast = self.pos_embed[:, :, :, :].expand(B_,  -1, -1, -1)
+        pos_broadcast = self.pos_embed[:, :, :, :].expand(B,  -1, -1, -1)
         x = x + pos_broadcast
 
         # 3) Build token tree => shape (B,bh,bw,n_levels,flat_dim)

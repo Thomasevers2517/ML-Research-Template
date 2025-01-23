@@ -108,7 +108,8 @@ class TreensformerBlockV5(nn.Module):
         x_attn = scatter_back(x_ln, attn_out, self.node_id_map, self.M)
 
         # 5) residual sum w/ dropout
-        x_res = x + self.resid_pdrop(x_attn)
+        # x_res = x + self.resid_pdrop(x_attn)
+        x_res = x + x_attn
 
         # 6) LN => TreeMLPV3 => shape (B,H,W,L,R)
         x_ln2 = self.ln_2(x_res)
