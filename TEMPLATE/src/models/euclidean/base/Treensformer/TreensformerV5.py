@@ -175,11 +175,11 @@ def create_mask(node_id_map, M, mask_dict=None):
                     # ALL PARENTS attend to NODE    
                     for parent in parent_ids:
                         mask[parent, node_id] = True
-                if mask_dict["SIBLINGS"]:
+                if mask_dict["SIBLING"]:
                     # NODE attends to direct SIBLINGS
                     for sibling in sibling_ids[0]:
                         mask[node_id, sibling] = True
-                if mask_dict["COUSINS"]:
+                if mask_dict["COUSIN"]:
                     # NODE attends to SIBLINGS of any order (as in cousins and such)
                     for level_siblings in sibling_ids:
                         for sibling in level_siblings:

@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from src.models.euclidean.base.Treensformer.TreeMLP.TreeMLPV3 import TreeMLPV3
 
 from src.models.euclidean.base.Treensformer.TreensformerV5 import TreensformerBlockV5
 
@@ -42,13 +43,23 @@ class ImageTreensformerV5(nn.Module):
         # where bh = H//patch_size, bw = W//patch_size
         bh = self.H // self.patch_size
         bw = self.W // self.patch_size
-        self.pos_embed = nn.Parameter(torch.zeros(1, bh, bw, self.flat_dim))
+        
+        self.pos_embed = torch.ParameterList()
+        
+        for level in range(self.num_levels):
+            self.pos_embed.append(nn.Parameter(torch.zeros(1, bh/(level+1), bw/(level+1) ,self.flat_dim)))
 
         # A simple linear embedding for each patch-level cell
         self.embedding = nn.Linear(self.flat_dim, self.inner_dim)
 
-
-
+        #for trying mlp with shared weights among transformer layers
+        
+        # shared_mlp = TreeMLPV3(
+        #     n_embd=self.inner_dim,
+        #     n_levels=self.num_levels,
+        #     hidden_multiplier=mlp["HIDDEN_MULTIPLIER"],
+        # )
+        
         # Build transformer layers
         self.layers = nn.Sequential(
             *[
@@ -59,7 +70,7 @@ class ImageTreensformerV5(nn.Module):
                     attn_pdrop=dropout,
                     resid_pdrop=dropout,
                     mask=mask,
-                    mlp=mlp,
+                    mlp=mlp
                 )
                 for _ in range(num_layers)
             ]
@@ -105,14 +116,19 @@ class ImageTreensformerV5(nn.Module):
         # => (B, h, w, C, patch_size, patch_size)
         bh, bw = x.shape[1], x.shape[2]
         x = x.view(B, bh, bw, C * (self.patch_size**2))
-        
-        # 2) Add positional embeddings => 
-        # expand along batch dimension
-        pos_broadcast = self.pos_embed[:, :, :, :].expand(B,  -1, -1, -1)
-        x = x + pos_broadcast
 
-        # 3) Build token tree => shape (B,bh,bw,n_levels,flat_dim)
+
+        # 2) Build token tree => shape (B,bh,bw,n_levels,flat_dim)
         x_tree = self.build_token_tree(x)
+
+        # 3) Add positional embeddings => 
+        # expand along batch dimension
+        for level in range(self.num_levels):
+            
+            pos_interleaved = self.pos_embed[level].repeat_interleave(2**level, dim=1).repeat_interleave(2**level, dim=2)
+            pos_broadcast = pos_interleaved.expand(B, -1, -1, -1)
+            x_tree[:, :, :, level, :] = x_tree[:, :, :, level, :] + pos_broadcast
+            
 
         # 4) Embedding => shape (B,bh,bw,n_levels,inner_dim)
         B_, h_, w_, L_, fd_ = x_tree.shape

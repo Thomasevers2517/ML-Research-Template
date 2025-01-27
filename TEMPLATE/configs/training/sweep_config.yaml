@@ -14,11 +14,11 @@ parameters:
   MODEL_PARAMS:
     parameters:
       NUM_LAYERS:
-        values: [8, 16]
+        values: [16]
       EMBEDDING_SIZE:
-        values: [256, 512]
+        values: [512]
       NUM_HEADS:
-        values: [4]
+        values: [2, 8]
       PATCH_SIZE: 
         values: [4]
       T_THRESHOLD:
@@ -56,7 +56,7 @@ parameters:
       LR:
         values: [0.0002, 0.001]
       NUM_EPOCHS:
-        values: [120]
+        values: [100]
       LR_SCHEDULER:
         values: ["CosineAnnealingLR"]
 
