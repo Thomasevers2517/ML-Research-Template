@@ -72,7 +72,7 @@ class TreensformerBlockV6(nn.Module):
         for i in range(n_levels):
             self.M += 4**i
             
-        H, W = 8, 8 # Hardcoded for now
+        H, W = 2**(n_levels-1), 2**(n_levels-1)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.node_id_map = build_node_id_map(H, W, self.n_levels).to(device=device)
@@ -119,8 +119,16 @@ class TreensformerBlockV6(nn.Module):
         x_ln2 = self.ln_2(x_res)
         mlp_out = self.tree_mlp(x_ln2)  # => (B,H,W,L,R)
 
-        # 8) final residual
-        x_final = x_res + self.resid_pdrop(mlp_out)
+        # 8) residual sum MLP-ed (Must be unified because the dropout needs to occor at the same nodes not different nodes at different branches)
+        x_unify = unify_nodes(mlp_out, self.node_id_map, self.M)
+        dropout_x_unify = self.resid_pdrop(x_unify)
+        dropout_x = scatter_back(x_ln2, dropout_x_unify, self.node_id_map, self.M)
+        
+        assert torch.all(dropout_x[0, :, :, -1, 0] == dropout_x[0, 0, 0, -1, 0]), \
+            "Dropout output is not equal along dimensions H and W at the last level"
+            
+        x_final = x_res + dropout_x
+        
         return x_final
     
 def create_mask(node_id_map, M, mask_dict=None):

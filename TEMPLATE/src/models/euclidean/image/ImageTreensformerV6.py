@@ -6,7 +6,7 @@ from src.models.euclidean.base.Treensformer.TreeMLP.TreeMLPV3 import TreeMLPV3
 
 from src.models.euclidean.base.Treensformer.TreensformerV6 import TreensformerBlockV6
 
-class ImageTreensformerV5(nn.Module):
+class ImageTreensformerV6(nn.Module):
     """
     End-to-end: extracts patches, builds hierarchical tokens,
     applies multiple TreensformerBlockV5 layers, then does classification.
@@ -47,7 +47,7 @@ class ImageTreensformerV5(nn.Module):
         self.pos_embed = torch.nn.ParameterList()
         
         for level in range(self.num_levels):
-            self.pos_embed.append(nn.Parameter(torch.zeros((1, bh//2**(level), bw//2**(level) ,self.flat_dim))))
+            self.pos_embed.append(nn.Parameter(torch.zeros((1, bh//2**(level), bw//2**(level) ,self.inner_dim))))
 
         # A simple linear embedding for each patch-level cell
         self.embedding = nn.Linear(self.flat_dim, self.inner_dim)
@@ -120,19 +120,17 @@ class ImageTreensformerV5(nn.Module):
 
         # 2) Build token tree => shape (B,bh,bw,n_levels,flat_dim)
         x_tree = self.build_token_tree(x)
-
-        # 3) Add positional embeddings => 
-        # expand along batch dimension
-        for level in range(self.num_levels):
-            
-            pos_interleaved = self.pos_embed[level].repeat_interleave(2**level, dim=1).repeat_interleave(2**level, dim=2)
-            pos_broadcast = pos_interleaved.expand(B, -1, -1, -1)
-            x_tree[:, :, :, level, :] = x_tree[:, :, :, level, :] + pos_broadcast
-            
-
-        # 4) Embedding => shape (B,bh,bw,n_levels,inner_dim)
+        
+        # 3) Embedding => shape (B,bh,bw,n_levels,flat_dim) => (B,bh,bw,n_levels,inner_dim)
         B_, h_, w_, L_, fd_ = x_tree.shape
         x_embed = self.embedding(x_tree)
+
+        # 4) Add positional embeddings => 
+        for level in range(self.num_levels):
+            pos_interleaved = self.pos_embed[level].repeat_interleave(2**level, dim=1).repeat_interleave(2**level, dim=2)
+            pos_broadcast = pos_interleaved.expand(B, -1, -1, -1)
+            x_embed[:, :, :, level, :] = x_embed[:, :, :, level, :] + pos_broadcast
+            
 
         # 5) Pass through layers => (B,h_,w_,L_,inner_dim)
         out = self.layers(x_embed)

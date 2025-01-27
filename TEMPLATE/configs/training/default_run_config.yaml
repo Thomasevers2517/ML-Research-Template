@@ -1,6 +1,6 @@
 TRAIN_CONFIG:
     TEST_RUN: True
-    MODEL: "ImageTreensformerV5"
+    MODEL: "ImageTreensformerV6"
     MODEL_PARAMS:
         NUM_LAYERS: 2
         EMBEDDING_SIZE: 18
@@ -9,6 +9,16 @@ TRAIN_CONFIG:
         T_THRESHOLD: 0
         NUM_CLS: 1
         H_REG: 0
+        MASK:
+            PARENT_CHILD: True
+            CHILD_PARENT: False
+            SIBLING: True
+            COUSIN: True
+            GRANDPARENT_GRANDCHILD: True
+            GRANDCHILD_GRANDPARENT: False
+        MLP:
+          HIDDEN_MULTIPLIER: 4
+
     OPTIMIZER: "AdamW"
     OPTIMIZER_PARAMS:
         LR: 0.002
@@ -24,7 +34,7 @@ TRAIN_CONFIG:
     DATA_LOADER_PARAMS:
         DATASET_NAME: "CIFAR100" # Options: ["ImageNet", "CIFAR10", "CIFAR100", "MNIST", "FashionMNIST"]
         DATA_DIR: "data"
-        BATCH_SIZE: 2
+        BATCH_SIZE: 1
         NUM_WORKERS: 4
         AUGMENTATION: True
     WANDB_LOGGING_PARAMS:

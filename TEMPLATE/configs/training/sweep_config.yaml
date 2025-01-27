@@ -9,7 +9,7 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["ImageTreensformerV5"]
+    values: ["ImageTreensformerV6"]
       
   MODEL_PARAMS:
     parameters:
@@ -36,9 +36,9 @@ parameters:
           SIBLING:
             values: [True]
           COUSIN:
-            values: [True, False]
+            values: [True]
           GRANDPARENT_GRANDCHILD:
-            values: [True, False]
+            values: [True]
           GRANDCHILD_GRANDPARENT:
             values: [False]
       MLP:
