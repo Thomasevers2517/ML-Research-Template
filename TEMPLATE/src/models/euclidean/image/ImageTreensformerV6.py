@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from src.models.euclidean.base.Treensformer.TreeMLP.TreeMLPV3 import TreeMLPV3
 
-from src.models.euclidean.base.Treensformer.TreensformerV5 import TreensformerBlockV5
+from src.models.euclidean.base.Treensformer.TreensformerV6 import TreensformerBlockV6
 
 class ImageTreensformerV5(nn.Module):
     """
@@ -63,7 +63,7 @@ class ImageTreensformerV5(nn.Module):
         # Build transformer layers
         self.layers = nn.Sequential(
             *[
-                TreensformerBlockV5(
+                TreensformerBlockV6(
                     n_embd=embedding_size,
                     num_heads=num_heads,
                     n_levels=self.num_levels,

@@ -18,7 +18,7 @@ parameters:
       EMBEDDING_SIZE:
         values: [512]
       NUM_HEADS:
-        values: [2, 8]
+        values: [4]
       PATCH_SIZE: 
         values: [4]
       T_THRESHOLD:
@@ -44,7 +44,7 @@ parameters:
       MLP:
         parameters:
           HIDDEN_MULTIPLIER:
-            values: [2, 4, 8]
+            values: [4]
         
 
 
@@ -54,7 +54,7 @@ parameters:
   OPTIMIZER_PARAMS:
     parameters:
       LR:
-        values: [0.0002, 0.001]
+        values: [0.0002]
       NUM_EPOCHS:
         values: [100]
       LR_SCHEDULER:
@@ -84,7 +84,7 @@ parameters:
       DATA_DIR:
         values: ["data"]
       BATCH_SIZE:
-        values: [512]
+        values: [256]
       NUM_WORKERS:
         values: [32]
       AUGMENTATION:
