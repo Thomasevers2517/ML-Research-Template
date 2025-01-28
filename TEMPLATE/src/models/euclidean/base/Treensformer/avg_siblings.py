@@ -1,6 +1,6 @@
 import torch
 
-def avg_siblings(x,sibling_order, h_summary_size=1, w_summary_size=1):
+def avg_siblings(x,sibling_order, h_summary_size=2, w_summary_size=2):
     """ Average the siblings of a node in the tree.
     Args:
         x: torch.Tensor of shape (B, H, W, R)
@@ -18,10 +18,13 @@ def avg_siblings(x,sibling_order, h_summary_size=1, w_summary_size=1):
     h_n_splits = H//h_num_sum
     w_n_splits = W//w_num_sum
 
-    assert isinstance(h_n_splits, int), "h_n_splits must be an integer"
-    assert isinstance(w_n_splits, int), "w_n_splits must be an integer"
-    h_n_splits = int(h_n_splits)
-    w_n_splits = int(w_n_splits)
+    assert h_n_splits * h_num_sum == H, (
+        f"H={H} not divisible by {h_num_sum}, might cause zero-size or shape mismatch!"
+    )
+    assert w_n_splits * w_num_sum == W, (
+        f"W={W} not divisible by {w_num_sum}, might cause zero-size or shape mismatch!"
+    )
+
     
     x_temp =  x.reshape(B, h_n_splits,h_num_sum, w_n_splits, w_num_sum, R)
     x_temp =  x_temp.mean(dim=[2, 4]) # B, h_n_splits, w_n_splits, R

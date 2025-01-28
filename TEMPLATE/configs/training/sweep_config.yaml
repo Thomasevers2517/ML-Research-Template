@@ -28,11 +28,11 @@ parameters:
       H_REG:
         values: [0]
       DROP_OUT:
-        values: [0.2]
+        values: [0.1, 0.3]
       MASK:
         parameters:
           PARENT_CHILD:
-            values: [True]
+            values: [False]
           CHILD_PARENT:
             values: [False]
           SIBLING:
@@ -40,7 +40,7 @@ parameters:
           COUSIN:
             values: [True]
           GRANDPARENT_GRANDCHILD:
-            values: [True]
+            values: [False]
           GRANDCHILD_GRANDPARENT:
             values: [False]
       MLP:

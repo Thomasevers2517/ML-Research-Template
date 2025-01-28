@@ -92,6 +92,7 @@ if __name__ == '__main__':
                         patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
                         T_Threshold=TRAIN_CONFIG['MODEL_PARAMS']['T_THRESHOLD'],
                         num_cls_tkn = TRAIN_CONFIG['MODEL_PARAMS']['NUM_CLS'],
+                        dropout= TRAIN_CONFIG['MODEL_PARAMS']['DROP_OUT']
                         ).to(device)
     elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV2':
         model = ImageTreensformerV2.ImageTreensformerV2(input_shape=input_shape, output_shape=targets_shape,

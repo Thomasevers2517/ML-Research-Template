@@ -9,6 +9,7 @@ from src.models.euclidean.base.Treensformer.TreeAttentionV3 import (
     build_node_id_map, unify_nodes, scatter_back, SimpleMHA
 )
 from src.models.euclidean.base.Treensformer.TreeMLP.TreeMLPV4 import TreeMLPV4
+from src.models.euclidean.base.Treensformer.TreeMLP.TreeMLPV5 import TreeMLPV5
 
 
 class NewGELU(nn.Module):
@@ -66,7 +67,7 @@ class TreensformerBlockV6(nn.Module):
         self.resid_pdrop = nn.Dropout(resid_pdrop)
 
         # Use TreeMLPV3 for the second part
-        self.tree_mlp = TreeMLPV4(n_embd, n_levels, mlp_multiplier=mlp["HIDDEN_MULTIPLIER"])
+        self.tree_mlp = TreeMLPV5(n_embd, n_levels, mlp_multiplier=mlp["HIDDEN_MULTIPLIER"])
         
         self.M = 0  # 
         for i in range(n_levels):
@@ -125,7 +126,7 @@ class TreensformerBlockV6(nn.Module):
         dropout_x = scatter_back(x_ln2, dropout_x_unify, self.node_id_map, self.M)
         
         assert torch.all(dropout_x[0, :, :, -1, 0] == dropout_x[0, 0, 0, -1, 0]), \
-            "Dropout output is not equal along dimensions H and W at the last level"
+            f"Dropout should be the same for all nodes at the same level, but got {dropout_x[0, :, :, -1, 0]}"
             
         x_final = x_res + dropout_x
         
