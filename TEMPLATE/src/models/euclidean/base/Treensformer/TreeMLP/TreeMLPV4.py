@@ -47,9 +47,9 @@ class TreeMLPV4(nn.Module):
             if i == 0:
                 # The bottommost children: no "lower levels" exist.
                 
-                merged = torch.cat([torch.zeros_like(x[:, :, :, i, :]) ,  x[:, :, :, i, :], x[:, :, :, i+1, :]], dim=3)
+                merged = torch.cat([x[:, :, :, i, :] ,  x[:, :, :, i, :], x[:, :, :, i+1, :]], dim=3)
             elif i == N_LEVELS - 1:
-                merged = torch.cat([x[:, :, :, i-1, :], x[:, :, :, i, :], torch.zeros_like(x[:, :, :, i, :])], dim=3)
+                merged = torch.cat([x[:, :, :, i-1, :], x[:, :, :, i, :], x[:, :, :, i, :]], dim=3)
             else:
                 merged = torch.cat([x[:, :, :, i-1, :], x[:, :, :, i, :], x[:, :, :, i+1, :]], dim=3)
                 
