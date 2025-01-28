@@ -14,7 +14,7 @@ class TreeMLPV4(nn.Module):
         # MLP: in_features = n_embd, out_features = n_embd//n_levels
         # Because each 'level' embedding has dimension R = (n_embd // n_levels)
         self.mlp = nn.Sequential(
-            nn.Linear(n_embd, (n_embd // n_levels) * mlp_multiplier),
+            nn.Linear((n_embd // n_levels)*3, (n_embd // n_levels) * mlp_multiplier),
             NewGELU(),
             nn.Linear((n_embd // n_levels) * mlp_multiplier, n_embd // n_levels),
         )
@@ -44,32 +44,15 @@ class TreeMLPV4(nn.Module):
             # 'i' is the level we're updating:
             #   i=0 => 'lowest' (children),
             #   i=N_LEVELS-1 => 'root'.
-
-            # The "upper" block is x[:, :, :, i:, :] => shape (B,H,W, N_LEVELS-i, R).
-            upper_block = x[:, :, :, i:, :]  # everything from 'i' up to root
-
             if i == 0:
                 # The bottommost children: no "lower levels" exist.
-                # So we just flatten (N_LEVELS * R) => pass MLP
-                merged = upper_block.reshape(B, H, W, self.n_embd)
+                
+                merged = torch.cat([torch.zeros_like(x[:, :, :, i, :]) ,  x[:, :, :, i, :], x[:, :, :, i+1, :]], dim=3)
+            elif i == N_LEVELS - 1:
+                merged = torch.cat([x[:, :, :, i-1, :], x[:, :, :, i, :], torch.zeros_like(x[:, :, :, i, :])], dim=3)
             else:
-                # We have 'i' lower levels => index [0..i-1]
-                # We'll average them because they are the "children" we need summarized
-                lower_block = x[:, :, :, :i, :].clone()
-
-                # For each of these i levels, do your "avg_siblings" or relevant averaging
-                for child_idx in range(i):
-                    lower_block[:, :, :, child_idx, :] = avg_siblings(
-                        lower_block[:, :, :, child_idx, :],
-                        sibling_order=i,  # or child_idx, depending on your usage
-                        h_summary_size=2,
-                        w_summary_size=2
-                    )
-
-                # Concat the lower block + upper block across the level dimension=3
-                merged_full = torch.cat([lower_block, upper_block], dim=3)  # shape (B,H,W, N_LEVELS, R)
-                merged = merged_full.reshape(B, H, W, self.n_embd)
-
+                merged = torch.cat([x[:, :, :, i-1, :], x[:, :, :, i, :], x[:, :, :, i+1, :]], dim=3)
+                
             # Pass the flattened (N_LEVELS*R) data into MLP => shape (B,H,W,R)
             new_slice = self.mlp(merged)  # out => (B,H,W, R)
 
@@ -81,8 +64,6 @@ class TreeMLPV4(nn.Module):
         # Finally, cat along dim=3 => shape (B,H,W,N_LEVELS,R)
         out = torch.cat(out_slices, dim=3)
         
-        # Dont give the Global an MLP
-        out[:, :, :, 1:, :] = x[:, :, :, 1:, :]
         return out
 
 class NewGELU(nn.Module):

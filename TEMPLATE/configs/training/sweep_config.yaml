@@ -27,6 +27,8 @@ parameters:
         values: [1]
       H_REG:
         values: [0]
+      DROP_OUT:
+        values: [0.2]
       MASK:
         parameters:
           PARENT_CHILD:

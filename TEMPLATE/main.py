@@ -127,6 +127,7 @@ if __name__ == '__main__':
                                                         patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
                                                         mask=TRAIN_CONFIG['MODEL_PARAMS']['MASK'],
                                                         mlp= TRAIN_CONFIG['MODEL_PARAMS']['MLP'],
+                                                        dropout= TRAIN_CONFIG['MODEL_PARAMS']['DROP_OUT'],
                                                         ).to(device)
     elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV6':
         model = ImageTreensformerV6.ImageTreensformerV6(input_shape=input_shape, output_shape=targets_shape,
@@ -136,6 +137,7 @@ if __name__ == '__main__':
                                                         patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
                                                         mask=TRAIN_CONFIG['MODEL_PARAMS']['MASK'],
                                                         mlp= TRAIN_CONFIG['MODEL_PARAMS']['MLP'],
+                                                        dropout= TRAIN_CONFIG['MODEL_PARAMS']['DROP_OUT'],
                                                         ).to(device)
     
 
