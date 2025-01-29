@@ -23,7 +23,7 @@ class TreeMLPV5(nn.Module):
         B, H, W, N_LEVELS, R = x.size()
 
         # We'll store updated embeddings for each level i in out_slices
-        out_slices = [torch.zeros(B, H, W, R, device=x.device) for _ in range(N_LEVELS)]
+        out_slices = [torch.zeros(B, H, W, R, device=x.device, dtype=torch.float32) for _ in range(N_LEVELS)]
 
         for i in range(N_LEVELS-1):
 
@@ -36,8 +36,14 @@ class TreeMLPV5(nn.Module):
             out_slices[i] = out_slices[i] + new_slice[:, :, :, 0, :]
             
             out_slices[i+1] = out_slices[i+1] + avg_siblings(new_slice[:, :, :, 1, :], (i+1), h_summary_size=2, w_summary_size=2)
+            if torch.isnan(new_slice).any():
+                print(f"NaN detected in new_slice at level {i}")
+            if torch.isnan(out_slices[i]).any():
+                print(f"NaN detected in out_slices[{i}] before addition")
+            if torch.isnan(out_slices[i+1]).any():
+                print(f"NaN detected in out_slices[{i+1}] before addition")
+                
         for i in range(N_LEVELS):
-            print(f"out_slices[{i}] = {out_slices[i]}")
             out_slices[i] = out_slices[i].unsqueeze(3) # shape => (B,H,W,1,R)
 
         # Finally, cat along dim=3 => shape (B,H,W,N_LEVELS,R)

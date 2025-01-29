@@ -32,7 +32,7 @@ parameters:
       MASK:
         parameters:
           PARENT_CHILD:
-            values: [False]
+            values: [True]
           CHILD_PARENT:
             values: [False]
           SIBLING:
