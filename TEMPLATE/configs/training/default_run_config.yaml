@@ -40,10 +40,10 @@ TRAIN_CONFIG:
         AUGMENTATION: True
     WANDB_LOGGING_PARAMS:
         PROJECT: "Treensformer"
-        DIR: "TEMPLATE/log"
+        DIR: "TEMPLATE/logging/wandb_log"
         NOTES: "Shared branch MLP"
     EARLY_STOPPING_PARAMS:
-        PATIENCE: 800
+        PATIENCE: 10
         DELTA: 0.0001
         VERBOSE: False
 

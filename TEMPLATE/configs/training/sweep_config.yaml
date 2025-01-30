@@ -1,7 +1,7 @@
 
 
 program: TEMPLATE/main.py
-method: grid
+method: random
 metric:
   name: validation_loss
   goal: minimize
@@ -16,9 +16,9 @@ parameters:
       NUM_LAYERS:
         values: [16]
       EMBEDDING_SIZE:
-        values: [512]
+        values: [512, 1024]
       NUM_HEADS:
-        values: [4]
+        values: [2, 4, 8]
       PATCH_SIZE: 
         values: [4]
       T_THRESHOLD:
@@ -28,7 +28,7 @@ parameters:
       H_REG:
         values: [0]
       DROP_OUT:
-        values: [0.1, 0.3]
+        values: [0.1, 0.2, 0.3]
       MASK:
         parameters:
           PARENT_CHILD:
@@ -40,13 +40,13 @@ parameters:
           COUSIN:
             values: [True]
           GRANDPARENT_GRANDCHILD:
-            values: [False]
+            values: [False, True]
           GRANDCHILD_GRANDPARENT:
             values: [False]
       MLP:
         parameters:
           HIDDEN_MULTIPLIER:
-            values: [4]
+            values: [2, 4, 8]
         
 
 
@@ -58,7 +58,7 @@ parameters:
       LR:
         values: [0.0002]
       NUM_EPOCHS:
-        values: [100]
+        values: [200]
       LR_SCHEDULER:
         values: ["CosineAnnealingLR"]
 
