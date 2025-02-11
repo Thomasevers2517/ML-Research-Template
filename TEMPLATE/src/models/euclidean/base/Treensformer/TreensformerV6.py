@@ -152,6 +152,9 @@ def create_mask(node_id_map, M, mask_dict=None):
 
                 node_id = node_id_map[h,w,ell].item()
                 if ell == L-1:
+                    if mask_dict["SELF"]:
+                        # NODE attends to itself
+                        mask[node_id, node_id] = True
                     continue
                 
                 parent_ids = [None] * ((L-1) - ell)
@@ -169,9 +172,7 @@ def create_mask(node_id_map, M, mask_dict=None):
                                     level_siblings.add(sibling_id.item())
                     sibling_ids.append(level_siblings)
                 
-                if mask_dict["SELF"]:
-                    # NODE attends to itself
-                    mask[node_id, node_id] = True
+                
                     
                 if mask_dict["CHILD_PARENT"]:
                     # NODE attents to PARENT
