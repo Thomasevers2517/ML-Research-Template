@@ -31,6 +31,8 @@ parameters:
         values: [0.2]
       MASK:
         parameters:
+          SELF:
+            values: [True]
           PARENT_CHILD:
             values: [False, True]
           CHILD_PARENT:

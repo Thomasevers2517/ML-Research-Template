@@ -10,11 +10,12 @@ TRAIN_CONFIG:
         NUM_CLS: 1
         H_REG: 0
         MASK:
-            PARENT_CHILD: True
+            SELF: True  # must be true if no child parent attention cus otherwise root node will not have any attention
+            PARENT_CHILD: False
             CHILD_PARENT: False
             SIBLING: True
             COUSIN: True
-            GRANDPARENT_GRANDCHILD: True
+            GRANDPARENT_GRANDCHILD: False
             GRANDCHILD_GRANDPARENT: False
         MLP:
           HIDDEN_MULTIPLIER: 4
