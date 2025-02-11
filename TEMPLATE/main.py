@@ -7,6 +7,7 @@ import src.models.euclidean.image.ImageTreensformerV3 as ImageTreensformerV3
 import src.models.euclidean.image.ImageTreensformerV4 as ImageTreensformerV4
 import src.models.euclidean.image.ImageTreensformerV5 as ImageTreensformerV5
 import src.models.euclidean.image.ImageTreensformerV6 as ImageTreensformerV6
+import src.models.euclidean.image.ImageTreensformerV7 as ImageTreensformerV7
 import torch
 import wandb
 import yaml
@@ -140,6 +141,16 @@ if __name__ == '__main__':
                                                         mlp= TRAIN_CONFIG['MODEL_PARAMS']['MLP'],
                                                         dropout= TRAIN_CONFIG['MODEL_PARAMS']['DROP_OUT'],
                                                         ).to(device)
+    elif TRAIN_CONFIG['MODEL'] == 'ImageTreensformerV7':
+        model = ImageTreensformerV7.ImageTreensformerV7(input_shape=input_shape, output_shape=targets_shape,
+                                                        num_layers=TRAIN_CONFIG['MODEL_PARAMS']['NUM_LAYERS'],
+                                                        embedding_size=TRAIN_CONFIG['MODEL_PARAMS']['EMBEDDING_SIZE'],
+                                                        num_heads=TRAIN_CONFIG['MODEL_PARAMS']['NUM_HEADS'],
+                                                        patch_size=TRAIN_CONFIG['MODEL_PARAMS']['PATCH_SIZE'],
+                                                        mask=TRAIN_CONFIG['MODEL_PARAMS']['MASK'],
+                                                        mlp= TRAIN_CONFIG['MODEL_PARAMS']['MLP'],
+                                                        dropout= TRAIN_CONFIG['MODEL_PARAMS']['DROP_OUT'],
+                                                        ).to(device)
     
 
     macs, params = get_model_complexity_info(
@@ -158,7 +169,7 @@ if __name__ == '__main__':
         print("Model compiled")
         
     #for watching gradients and parameters
-    wandb.watch(model)
+    # wandb.watch(model)
 
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=TRAIN_CONFIG['OPTIMIZER_PARAMS']['LR'])

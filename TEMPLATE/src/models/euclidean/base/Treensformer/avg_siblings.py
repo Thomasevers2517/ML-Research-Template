@@ -10,7 +10,8 @@ def avg_siblings(x, sibling_order, h_summary_size=2, w_summary_size=2):
     Returns:
         x: torch.Tensor of shape (B, H, W, R)
     """
-    
+    if sibling_order == 0:
+        return x
     B, H, W, R = x.size()
 
     # Ensure sibling_order is a tensor and cast it to int64 for exponentiation

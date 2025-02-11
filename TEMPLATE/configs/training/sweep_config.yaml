@@ -9,7 +9,7 @@ parameters:
   TEST_RUN:
     values: [False]
   MODEL:
-    values: ["ImageTreensformerV6"]
+    values: ["ImageTreensformerV7"]
       
   MODEL_PARAMS:
     parameters:
@@ -34,7 +34,7 @@ parameters:
           SELF:
             values: [True]
           PARENT_CHILD:
-            values: [False, True]
+            values: [False]
           CHILD_PARENT:
             values: [False]
           SIBLING:
