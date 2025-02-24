@@ -92,7 +92,7 @@ def unify_nodes(x, node_id_map, M):
     unique_nodes = sum_buffer / count_buffer.unsqueeze(2)
     return unique_nodes
 
-def scatter_back(x, updated_nodes, node_id_map, M):
+def scatter_back(x_shape, updated_nodes, node_id_map, M):
     """
     x: (B, H, W, L, R) [only for shape references]
     updated_nodes: (B, M, R)
@@ -103,7 +103,7 @@ def scatter_back(x, updated_nodes, node_id_map, M):
       new_x => (B, H, W, L, R)
         Each position picks updated_nodes[b, node_id_map[h,w,level], :]
     """
-    B, H, W, L, R = x.shape
+    B, H, W, L, R = x_shape
 
     # Flatten node_id_map to (H * W * L,)
     node_id_flat = node_id_map.view(-1)  # Shape: (H * W * L)

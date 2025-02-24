@@ -123,7 +123,7 @@ class TreensformerBlockV6(nn.Module):
         # 8) residual sum MLP-ed (Must be unified because the dropout needs to occor at the same nodes not different nodes at different branches)
         x_unify = unify_nodes(mlp_out, self.node_id_map, self.M)
         dropout_x_unify = self.resid_pdrop(x_unify)
-        dropout_x = scatter_back(x_ln2, dropout_x_unify, self.node_id_map, self.M)
+        dropout_x = scatter_back(mlp_out.shape, dropout_x_unify, self.node_id_map, self.M)
         
         assert torch.all(dropout_x[0, :, :, -1, 0] == dropout_x[0, 0, 0, -1, 0]), \
             f"Dropout should be the same for all nodes at the same level, but got {dropout_x[0, :, :, -1, 0]}"

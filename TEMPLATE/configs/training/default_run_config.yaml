@@ -1,6 +1,6 @@
 TRAIN_CONFIG:
     TEST_RUN: True
-    MODEL: "ImageTreensformerV6"
+    MODEL: "ImageTreensformerV7"
     MODEL_PARAMS:
         NUM_LAYERS: 4
         EMBEDDING_SIZE: 120

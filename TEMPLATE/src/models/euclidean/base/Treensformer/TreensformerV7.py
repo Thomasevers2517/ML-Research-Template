@@ -70,7 +70,7 @@ class TreensformerBlockV7(nn.Module):
             NewGELU(),
             nn.Linear(self.n_embd * mlp["HIDDEN_MULTIPLIER"], self.n_embd),
         )
-        
+        self.M = 0  # 
         for i in range(n_levels):
             self.M += 4**i
             
@@ -112,7 +112,7 @@ class TreensformerBlockV7(nn.Module):
         attn_out = self.attn(unique_nodes, mask=self.att_mask)
 
         # 5) scatter => shape (B,H,W,L,R)
-        x_attn = scatter_back(x_ln, attn_out, self.node_id_map, self.M)
+        x_attn = scatter_back(x_ln.shape, attn_out, self.node_id_map, self.M)
 
         # 6) residual sum
         x_res = x + x_attn
@@ -125,13 +125,13 @@ class TreensformerBlockV7(nn.Module):
         mlp_out = self.mlp(x_ln2)  # => (B,H,W,L,R)
         mlp_out = mlp_out.view(B, H, W, L, R)
         for i in range(L):
-            mlp_out[:, :, :, i, :] = avg_siblings(mlp_out[:, :, :, i, :], sibling_order=i, h_summary_size=H, w_summary_size=W)
+            mlp_out[:, :, :, i, :] = avg_siblings(mlp_out[:, :, :, i, :], sibling_order=i, h_summary_size=2, w_summary_size=2)
         
 
         # 8) residual sum MLP-ed (Must be unified because the dropout needs to occor at the same nodes not different nodes at different branches)
         x_unify = unify_nodes(mlp_out, self.node_id_map, self.M)
         dropout_x_unify = self.resid_pdrop(x_unify)
-        dropout_x = scatter_back(x_ln2, dropout_x_unify, self.node_id_map, self.M)
+        dropout_x = scatter_back(mlp_out.shape, dropout_x_unify, self.node_id_map, self.M)
         
         assert torch.all(dropout_x[0, :, :, -1, 0] == dropout_x[0, 0, 0, -1, 0]), \
             f"Dropout should be the same for all nodes at the same level, but got {dropout_x[0, :, :, -1, 0]}"
